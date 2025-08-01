@@ -1,0 +1,33 @@
+# Carpeta con fuentes y otros archivos fuera del repositorio
+fuentes/
+
+# Carpetas de componentes con repos propios
+rund-api/
+rund-mgp/
+
+# Archivos de entorno con datos sensibles
+.env
+.env.local
+.env.prod
+
+# Logs y archivos temporales
+logs/
+tmp/
+*.log
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Docker
+.dockerignore
+
+# Backup files
+*.bak
+*.backup
