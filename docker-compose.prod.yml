@@ -1,0 +1,79 @@
+name: rund
+
+services:
+  openkm:
+    image: openkm/openkm-ce:latest
+    container_name: rund-core
+    platform: linux/amd64
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - openkm-data:/opt/tomcat
+    networks:
+      - rund-network
+    environment:
+      - JAVA_OPTS=-Djava.security.egd=file:/dev/./urandom
+      - TZ=America/Bogota
+
+  rund-api:
+    # Imagen desde Docker Hub
+    image: ocastelblanco/rund-api:latest
+    container_name: rund-api
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      # Solo logs y tmp para producción
+      - ./logs:/var/www/html/logs
+      - ./tmp:/var/www/html/tmp
+    environment:
+      - TZ=America/Bogota
+      - PHP_OPCACHE_ENABLE=1
+      - PHP_OPCACHE_REVALIDATE_FREQ=60
+      - PHP_OPCACHE_VALIDATE_TIMESTAMPS=0  # Deshabilitado en producción
+      - ENVIRONMENT=production
+      # URLs para producción
+      - API_BASE_URL=http://172.16.234.52:3000
+      - EXTERNAL_API_URL=http://rund-core:8080/OpenKM
+    networks:
+      - rund-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  rund-mgp:
+    # Imagen desde Docker Hub
+    image: ocastelblanco/rund-mgp:latest
+    container_name: rund-mgp
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      - TZ=America/Bogota
+      - NODE_ENV=production
+      - PORT=4000
+      # URLs para producción
+      - API_BASE_URL=http://172.16.234.52:3000
+      - INTERNAL_API_URL=http://rund-api:3000
+    networks:
+      - rund-network
+    depends_on:
+      - rund-api
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  rund-network:
+    driver: bridge
+
+volumes:
+  openkm-data:
+    driver: local
