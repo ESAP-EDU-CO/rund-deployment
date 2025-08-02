@@ -31,7 +31,7 @@ build_and_push() {
     local context_path=$2
     
     echo ""
-    echo "🔨 Construyendo $component..."
+    echo "🔨 Construyendo $component para múltiples arquitecturas..."
     
     # Verificar que existe el directorio
     if [ ! -d "$context_path" ]; then
@@ -40,19 +40,20 @@ build_and_push() {
         return 1
     fi
     
-    # Construir la imagen
-    docker build -t "$DOCKER_USERNAME/rund-$component:$TAG" "$context_path"
+    # Construir la imagen para múltiples plataformas
+    docker buildx build \
+        --platform linux/amd64,linux/arm64 \
+        -t "$DOCKER_USERNAME/rund-$component:$TAG" \
+        --push \
+        "$context_path"
     
     # También tagear como latest si no es latest
     if [ "$TAG" != "latest" ]; then
-        docker tag "$DOCKER_USERNAME/rund-$component:$TAG" "$DOCKER_USERNAME/rund-$component:latest"
-    fi
-    
-    echo "📤 Subiendo $component..."
-    docker push "$DOCKER_USERNAME/rund-$component:$TAG"
-    
-    if [ "$TAG" != "latest" ]; then
-        docker push "$DOCKER_USERNAME/rund-$component:latest"
+        docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            -t "$DOCKER_USERNAME/rund-$component:latest" \
+            --push \
+            "$context_path"
     fi
     
     echo "✅ $component completado"
