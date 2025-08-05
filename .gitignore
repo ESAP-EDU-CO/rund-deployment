@@ -4,6 +4,7 @@ fuentes/
 # Carpetas de componentes con repos propios
 rund-api/
 rund-mgp/
+rund-ocr/
 
 # Archivos de entorno con datos sensibles
 .env

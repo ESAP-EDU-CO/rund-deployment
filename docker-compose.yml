@@ -49,10 +49,17 @@ services:
       - API_BASE_URL=http://localhost:3000
       # URL INTERNA con OpenKM
       - EXTERNAL_API_URL=http://rund-core:8080/OpenKM
+      # URL INTERNA con OCR
+      - OCR_API_URL=http://rund-ocr:8000
+      # URL INTERNA con IA
+      - AI_API_URL=http://rund-ai:11434
       # En producción, la URL interna NO cambia. Solo la externa.
       # - API_BASE_URL=http://172.16.234.52:3000
     networks:
       - rund-network
+    depends_on:
+      - rund-ocr
+      - rund-ai
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 30s
@@ -88,6 +95,76 @@ services:
       retries: 3
       start_period: 40s
 
+  rund-ai:
+    image: ollama/ollama:latest
+    container_name: rund-ai
+    # Forzar el uso de la plataforma amd64, ya que no hay imagen arm64 oficial para Ollama.
+    platform: linux/amd64
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    networks:
+      - rund-network
+    environment:
+      - TZ=America/Bogota
+      - OLLAMA_HOST=0.0.0.0
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    # Si tienes GPU NVIDIA disponible, descomenta las siguientes líneas:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+  rund-ocr:
+    image: rund-ocr:latest
+    build:
+      context: ./rund-ocr
+      dockerfile: Dockerfile
+    container_name: rund-ocr
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      # Directorio temporal para archivos de procesamiento
+      - ocr-temp:/tmp/ocr-processing
+      # Cache de modelos para evitar descargas repetidas
+      - ocr-models:/root/.paddleocr
+    networks:
+      - rund-network
+    environment:
+      - TZ=America/Bogota
+      - PYTHONUNBUFFERED=1
+      # Configuración específica para PaddleOCR
+      - PADDLE_OCR_LANG=es,en
+      - PADDLE_OCR_USE_GPU=false
+      - MAX_FILE_SIZE=50MB
+      - OCR_TIMEOUT=60
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 90s
+    # Límites de recursos para evitar consumo excesivo de CPU
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "2.0"
+        reservations:
+          memory: 1G
+          cpus: "1.0"
+
 networks:
   rund-network:
     driver: bridge
@@ -95,4 +172,13 @@ networks:
 volumes:
   # Define el volumen nombrado para los datos de OpenKM
   openkm-data:
+    driver: local
+  # Volumen para modelos de Ollama
+  ollama-data:
+    driver: local
+  # Volumen para archivos temporales de OCR
+  ocr-temp:
+    driver: local
+  # Volumen para cache de modelos de PaddleOCR
+  ocr-models:
     driver: local
