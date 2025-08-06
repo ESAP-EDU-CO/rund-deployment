@@ -35,10 +35,12 @@ services:
       - ENVIRONMENT=production
       # URLs para producción
       - API_BASE_URL=http://172.16.234.52:3000
-      - EXTERNAL_API_URL=http://rund-core:8080/OpenKM
+      - CORE_API_URL=http://rund-core:8080/OpenKM
       # URLs internas para OCR y AI
       - OCR_API_URL=http://rund-ocr:8000
       - AI_API_URL=http://rund-ai:11434
+      # Ruta al ejecutable de LibreOffice
+      - LIBREOFFICE_EXECUTABLE=/usr/lib/libreoffice/program/soffice
     networks:
       - rund-network
     depends_on:

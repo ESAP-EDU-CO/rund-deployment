@@ -48,13 +48,13 @@ services:
       # URL de la API.
       - API_BASE_URL=http://localhost:3000
       # URL INTERNA con OpenKM
-      - EXTERNAL_API_URL=http://rund-core:8080/OpenKM
+      - CORE_API_URL=http://rund-core:8080/OpenKM
       # URL INTERNA con OCR
       - OCR_API_URL=http://rund-ocr:8000
       # URL INTERNA con IA
       - AI_API_URL=http://rund-ai:11434
-      # En producción, la URL interna NO cambia. Solo la externa.
-      # - API_BASE_URL=http://172.16.234.52:3000
+      # Ruta al ejecutable de LibreOffice
+      - LIBREOFFICE_EXECUTABLE=/usr/lib/libreoffice/program/soffice
     networks:
       - rund-network
     depends_on:
