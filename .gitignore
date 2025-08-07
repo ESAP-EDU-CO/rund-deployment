@@ -34,4 +34,6 @@ Thumbs.db
 *.backup
 *.tar
 *.zip
-backups/backups
+backups/
+backups/backups/
+scripts/backups/

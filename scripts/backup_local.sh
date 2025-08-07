@@ -1,6 +1,6 @@
 # ==================== CONFIGURACIÓN ====================
 VOLUME_NAME="rund_openkm-data"
-BACKUP_DIR="./backups/"
+BACKUP_DIR="./backups"
 
 # Generar timestamp para el nombre del archivo
 TIMESTAMP=$(date '+%Y%m%d_%H%M%S')
