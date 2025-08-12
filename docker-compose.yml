@@ -109,14 +109,16 @@ services:
       - rund-network
     environment:
       - TZ=America/Bogota
-      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_HOST=0.0.0.0:11434
+      - OLLAMA_ORIGINS=*
+      - OLLAMA_KEEP_ALIVE=5m
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      test: ["CMD", "curl", "-f", "http://0.0.0.0:11434/api/tags"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 60s
-    # Si tienes GPU NVIDIA disponible, descomenta las siguientes líneas:
+      retries: 5  # Aumentado
+      start_period: 120s  # Aumentado para dar tiempo a cargar el modelo
+    # Si hay GPU NVIDIA disponible, se descomentan las siguientes líneas:
     # deploy:
     #   resources:
     #     reservations:
