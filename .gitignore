@@ -2,9 +2,7 @@
 fuentes/
 
 # Carpetas de componentes con repos propios
-rund-api/
-rund-mgp/
-rund-ocr/
+rund-*/
 
 # Archivos de entorno con datos sensibles
 .env
@@ -41,3 +39,4 @@ scripts/backups/
 # Claude AI
 CLAUDE.md
 .claude
+docs/
