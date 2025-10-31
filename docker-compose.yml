@@ -51,8 +51,10 @@ services:
       - CORE_API_URL=http://rund-core:8080/OpenKM
       # URL INTERNA con OCR
       - OCR_API_URL=http://rund-ocr:8000
-      # URL INTERNA con IA
-      - AI_API_URL=http://rund-ai:11434
+      # URL INTERNA con IA (servicio Python)
+      - AI_API_URL=http://rund-ai:8001
+      # URL INTERNA con Ollama
+      - OLLAMA_API_URL=http://rund-ollama:11434
       # Ruta al ejecutable de LibreOffice
       - LIBREOFFICE_EXECUTABLE=/usr/lib/libreoffice/program/soffice
     networks:
@@ -60,6 +62,7 @@ services:
     depends_on:
       - rund-ocr
       - rund-ai
+      - rund-ollama
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 30s
@@ -96,8 +99,66 @@ services:
       start_period: 40s
 
   rund-ai:
-    image: ollama/ollama:latest
+    image: rund-ai:latest
+    build:
+      context: ./rund-ai
+      dockerfile: Dockerfile
     container_name: rund-ai
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    volumes:
+      # Volúmenes para modelos y cache
+      - ai-models:/models
+      - ai-cache:/cache
+      # Development only: mount app directory for live changes
+      - type: bind
+        source: ./rund-ai
+        target: /app
+      # Preserve the venv directory from the image
+      - /opt/venv
+    environment:
+      - TZ=America/Bogota
+      - PYTHONUNBUFFERED=1
+      - FLASK_ENV=development
+      # URLs internas
+      - OLLAMA_URL=http://rund-ollama:11434
+      - OCR_URL=http://rund-ocr:8000
+      # Configuración de modelos
+      - EMBEDDINGS_MODEL=paraphrase-multilingual-MiniLM-L12-v2
+      - EMBEDDINGS_DEVICE=cpu
+      - VECTOR_DB_PATH=/cache/chromadb
+      - VECTOR_DB_NAME=rund_documents
+      - NUEXTRACT_MODEL=nuextract
+      - GEMMA_MODEL=gemma2:2b
+      # Configuración general
+      - LOG_LEVEL=INFO
+      - MAX_WORKERS=4
+      - OLLAMA_TIMEOUT=120
+      - OLLAMA_RETRY_ATTEMPTS=3
+    networks:
+      - rund-network
+    depends_on:
+      - rund-ollama
+      - rund-ocr
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: "2.0"
+        reservations:
+          memory: 2G
+          cpus: "1.0"
+
+  rund-ollama:
+    image: ollama/ollama:latest
+    container_name: rund-ollama
     # Forzar el uso de la plataforma amd64, ya que no hay imagen arm64 oficial para Ollama.
     platform: linux/amd64
     restart: unless-stopped
@@ -183,4 +244,10 @@ volumes:
     driver: local
   # Volumen para cache de modelos de PaddleOCR
   ocr-models:
+    driver: local
+  # Volumen para modelos de AI (embeddings, etc.)
+  ai-models:
+    driver: local
+  # Volumen para cache de ChromaDB
+  ai-cache:
     driver: local
