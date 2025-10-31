@@ -35,8 +35,3 @@ Thumbs.db
 backups/
 backups/backups/
 scripts/backups/
-
-# Claude AI
-CLAUDE.md
-.claude
-docs/
