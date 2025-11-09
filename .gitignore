@@ -35,3 +35,7 @@ Thumbs.db
 backups/
 backups/backups/
 scripts/backups/
+
+# Tests
+tests/
+pruebas/

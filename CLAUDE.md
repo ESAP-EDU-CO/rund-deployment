@@ -4,7 +4,7 @@ Este archivo proporciona orientación completa sobre el proyecto RUND y sus mód
 
 ## 📋 Resumen del Proyecto
 
-**RUND** (Repositorio Unificado Nacional de Docentes) es un sistema de gestión documental para hojas de vida profesorales de la ESAP (Escuela Superior de Administración Pública - Colombia). Gestiona aproximadamente 300 profesores con ~40 documentos cada uno (~12,000 documentos totales).
+**RUND** (Registro Único Nacional Docente) es un sistema de gestión documental para hojas de vida profesorales de la ESAP (Escuela Superior de Administración Pública - Colombia). Gestiona aproximadamente 300 profesores con ~40 documentos cada uno (~12,000 documentos totales).
 
 ## 🏗️ Arquitectura General
 
