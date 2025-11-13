@@ -60,9 +60,8 @@ services:
     networks:
       - rund-network
     depends_on:
+      - openkm
       - rund-ocr
-      - rund-ai
-      - rund-ollama
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 30s
@@ -122,6 +121,7 @@ services:
       - PYTHONUNBUFFERED=1
       - FLASK_ENV=development
       # URLs internas
+      - RUND_API_URL=http://rund-api:3000
       - OLLAMA_URL=http://rund-ollama:11434
       - OCR_URL=http://rund-ocr:8000
       # Configuración de modelos
@@ -139,6 +139,7 @@ services:
     networks:
       - rund-network
     depends_on:
+      - rund-api
       - rund-ollama
       - rund-ocr
     healthcheck:

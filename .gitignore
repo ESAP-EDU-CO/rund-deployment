@@ -36,6 +36,6 @@ backups/
 backups/backups/
 scripts/backups/
 
-# Tests
+# Tests y documentación interna
 tests/
-pruebas/
+mejoras/

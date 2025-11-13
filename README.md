@@ -101,7 +101,7 @@ POST /extract-text    # Extracción de texto (multipart/form-data)
 
 ### 5. **rund-ai** - Servicio de Inteligencia Artificial
 - **Tecnología**: Python 3.9+ + Flask + Sentence Transformers + ChromaDB
-- **Función**: Extracción estructurada de datos, búsqueda semántica, validación
+- **Función**: Extracción estructurada de datos, búsqueda semántica, validación, gestión de cola asíncrona
 - **Puerto**: 8001
 - **Modelos**:
   - `paraphrase-multilingual-MiniLM-L12-v2` (embeddings, ~120MB)
@@ -110,23 +110,41 @@ POST /extract-text    # Extracción de texto (multipart/form-data)
   - `ai-models` (modelos de embeddings)
   - `ai-cache` (ChromaDB para búsqueda semántica)
 - **Recursos**: 2GB RAM
+- **Arquitectura**: Procesamiento asíncrono con workers y cola FIFO
 
 **Endpoints**:
 ```bash
-GET  /health          # Health check
-GET  /info            # Información del servicio
-POST /extract         # Extracción estructurada (JSON)
-POST /classify        # Clasificación de documento
-POST /search          # Búsqueda semántica
-POST /validate        # Validación de consistencia
-GET  /stats           # Estadísticas y tendencias
+# Core
+GET  /health                      # Health check
+GET  /info                        # Información del servicio
+
+# Extracción
+POST /extract                     # Extracción estructurada (JSON)
+POST /classify                    # Clasificación de documento
+POST /validate                    # Validación de consistencia
+
+# Cola de procesamiento asíncrono
+POST /queue/add-batch             # Encolar documentos para extracción
+GET  /queue/stats                 # Estadísticas de la cola
+GET  /queue/job/<document_id>     # Estado de un job específico
+
+# Índice de extracción
+GET  /extraction/statistics       # Estadísticas generales del índice
+GET  /extraction/professor/<ced>  # Documentos de un profesor
+
+# Búsqueda semántica
+POST /search                      # Búsqueda semántica
+GET  /stats                       # Estadísticas y tendencias
 ```
 
 **Características avanzadas**:
-- ✅ Validación post-extracción implementada
-- ✅ Limpieza de datos (números, texto)
-- ✅ Confianza por campo (0-100%)
-- ✅ Detección de datos sospechosos
+- ✅ **Procesamiento asíncrono**: Cola con workers para documentos largos
+- ✅ **Índice centralizado**: Tracking de todos los documentos procesados
+- ✅ **Arquitectura de microservicios**: Comunicación estricta vía rund-api
+- ✅ **Estadísticas completas**: Por profesor, categoría, confiabilidad, tiempos
+- ✅ **Validación post-extracción**: Limpieza y detección de datos corruptos
+- ✅ **Confianza por campo**: Scoring 0-100% por campo extraído
+- ✅ **Truncado inteligente**: Límites de caracteres según tipo de documento
 
 ### 6. **rund-ollama** - Motor LLM
 - **Tecnología**: Ollama (servidor de modelos de lenguaje)
@@ -191,35 +209,58 @@ Usuario → rund-mgp → rund-auth (/oauth/login)
 
 ## 🔄 Flujo de Datos
 
-### Extracción de Documentos (OCR + IA)
+### Extracción de Documentos (OCR + IA - Procesamiento Asíncrono)
 
 ```
 Usuario sube PDF
        ↓
 rund-mgp (Angular) - Interface de carga
        ↓
-rund-api (PHP) - Recibe archivo
+rund-api (PHP) - Recibe archivo y metadata
        ↓
-┌──────┴──────────────────────────────┐
-│                                     │
-↓                                     ↓
-rund-core (OpenKM)            rund-ocr (PaddleOCR)
-Almacena PDF                  Extrae texto (30-60s)
-       ↓                             ↓
-       │                      rund-ai (Flask)
-       │                      Valida y limpia datos
-       │                             ↓
-       │                      rund-ollama (NuExtract)
-       │                      Extracción estructurada (60-300s)
-       │                             ↓
-       └─────────────────────────────┘
-                    ↓
-            Datos extraídos + validados
-                    ↓
-            rund-api procesa y guarda
-                    ↓
-            rund-mgp muestra resultado
+┌──────┴──────────────────────────────────────┐
+│                                             │
+↓                                             ↓
+rund-core (OpenKM)                     rund-ai (Flask)
+- Almacena PDF                         - Encola documento (status: pendiente)
+- Asigna categorías demográficas       - Actualiza índice de extracción
+  (sexo, titulación, etc.)             - Responde inmediatamente (202 Accepted)
+- Asigna categorías genéricas               ↓
+  (TIPO, FORMATO, ORIGEN)             ┌─────┴─────┐
+- Marca EXTRACTION_STATUS/pendiente   │  Workers  │ (procesamiento asíncrono)
+                                      └─────┬─────┘
+                                            ↓
+                                      1. Descarga PDF de rund-core (vía rund-api)
+                                            ↓
+                                      2. rund-ocr (PaddleOCR)
+                                         Extrae texto (30-60s)
+                                            ↓
+                                      3. rund-ollama (NuExtract)
+                                         Extracción estructurada (60-300s)
+                                            ↓
+                                      4. Validación y limpieza de datos
+                                            ↓
+                                      5. Guarda JSON side-car en rund-core
+                                            ↓
+                                      6. Actualiza índice (status: completado)
+                                            ↓
+                                      7. Actualiza categoría:
+                                         EXTRACTION_STATUS/completado
+                                            ↓
+                                      8. Callback a rund-api (webhook)
+                                            ↓
+                                      rund-api notifica a rund-mgp
+                                            ↓
+                                      Usuario ve resultado
 ```
+
+**Ventajas del flujo asíncrono**:
+- ✅ Respuesta inmediata (< 1s) al usuario
+- ✅ No bloquea la interfaz durante procesamiento largo
+- ✅ Procesa documentos largos sin timeouts
+- ✅ Permite procesamiento en batch (múltiples documentos)
+- ✅ Tracking completo en índice centralizado
+- ✅ Estadísticas en tiempo real
 
 ### Búsqueda Semántica
 
@@ -494,12 +535,11 @@ rund-deployment/
 │   ├── debug_network.sh        # Debug de red Docker
 │   └── check-health.sh         # Verificación de servicios
 ├── docs/
-│   ├── arquitectura.md         # Documentación de arquitectura
-│   ├── ai_ocr-prompt_03.md     # Análisis de OCR/AI
-│   └── prompt_04_plan_implementacion_demo.md
-├── pruebas/
-│   ├── resultados_extraccion_cedula-2025-10-06.md
-│   ├── resultados_validacion_critica.md
+│   └── guias/                  # Guías y tutoriales
+├── mejoras/
+│   ├── extraction_index_schema.json  # Schema del índice de extracción
+│   ├── extraction_index_example.json # Ejemplo del índice
+│   ├── fase_actual_mejoras_nov12.md # Documentación de mejoras recientes
 │   └── *.pdf                   # Documentos de prueba
 └── rund-*/                     # Repositorios de componentes (desarrollo)
     ├── rund-api/
@@ -862,9 +902,13 @@ npm run dev  # Hot reload automático con tsx
 ## 📚 Documentación Adicional
 
 - **[CLAUDE.md](CLAUDE.md)** - Guía completa del proyecto (casos de uso, tipos de documentos, comandos)
-- **[docs/arquitectura.md](docs/arquitectura.md)** - Detalles de arquitectura
-- **[docs/ai_ocr-prompt_03.md](docs/ai_ocr-prompt_03.md)** - Análisis de precisión OCR/AI
-- **[pruebas/resultados_validacion_critica.md](pruebas/resultados_validacion_critica.md)** - Resultados de validación de datos
+- **[mejoras/fase_actual_mejoras_nov12.md](mejoras/fase_actual_mejoras_nov12.md)** - Mejoras implementadas en noviembre 2024
+  - Extracción asíncrona con cola de trabajos
+  - Índice centralizado de documentos extraídos
+  - Arquitectura de microservicios estricta
+  - Preservación de categorías demográficas y genéricas
+- **[rund-ai/README.md](rund-ai/README.md)** - Documentación específica del servicio de IA
+- **[mejoras/extraction_index_schema.json](mejoras/extraction_index_schema.json)** - Schema del índice de extracción
 
 ### Enlaces Externos
 
@@ -891,21 +935,27 @@ Para reportar problemas o solicitar funcionalidades:
 
 ## 📋 Roadmap
 
-### ✅ Completado (v1.0)
+### ✅ Completado (v1.2 - Noviembre 2024)
 - Arquitectura de microservicios con 7 contenedores
 - OCR con PaddleOCR (español/inglés)
 - Extracción estructurada con NuExtract
 - Validación y limpieza de datos post-extracción
 - Búsqueda semántica con ChromaDB
 - Servicio de autenticación con Entra ID (fase inicial)
+- **✨ Extracción asíncrona con cola de trabajos**
+- **✨ Índice centralizado de documentos extraídos**
+- **✨ Arquitectura de microservicios estricta (rund-ai → rund-api → rund-core)**
+- **✨ Preservación de categorías demográficas y genéricas**
+- **✨ Estadísticas completas de extracción**
+- **✨ Endpoints de webhook para callbacks**
 
-### 🚧 En Progreso (v1.1)
-- **rund-auth**: Integración con rund-api y rund-mgp
+### 🚧 En Progreso (v1.3)
+- **rund-auth**: Integración completa con rund-api y rund-mgp
 - **rund-auth**: Middleware de validación de tokens
-- Pre-procesamiento de imágenes para OCR
+- Pre-procesamiento de imágenes para OCR (CLAHE, binarización)
 - Procesamiento por zonas (ROI) para cédulas
 - Detección automática de formato de cédula
-- Mejora de precisión de extracción (OCR)
+- Mejora de precisión de extracción (objetivo: 60-70%)
 
 ### 📅 Planificado (v1.2+)
 - **rund-auth**: Caché de validaciones de tokens
