@@ -8,7 +8,7 @@ set -e
 # Configuración
 DOCKER_USERNAME="ocastelblanco"
 TAG=${1:-latest}
-COMPONENTS=${2:-"api,mgp,ocr"}
+COMPONENTS=${2:-"api,mgp,ocr,ai"}
 
 echo "🏗️  Construyendo y subiendo imágenes de RUND"
 echo "👤 Usuario Docker Hub: $DOCKER_USERNAME"
@@ -21,15 +21,15 @@ show_help() {
     echo ""
     echo "Argumentos:"
     echo "  tag         Tag para las imágenes (default: latest)"
-    echo "  components  Componentes a construir, separados por coma (default: api,mgp,ocr)"
+    echo "  components  Componentes a construir, separados por coma (default: api,mgp,ocr,ai)"
     echo ""
     echo "Ejemplos:"
     echo "  $0                           # Construir todos con tag latest"
     echo "  $0 v1.2.3                   # Construir todos con tag v1.2.3"
-    echo "  $0 latest api,ocr            # Construir solo api y ocr"
-    echo "  $0 v1.2.3 ocr               # Construir solo ocr con tag v1.2.3"
+    echo "  $0 latest api,ocr,ai         # Construir solo api, ocr y ai"
+    echo "  $0 v1.2.3 ai                # Construir solo ai con tag v1.2.3"
     echo ""
-    echo "Componentes disponibles: api, mgp, ocr"
+    echo "Componentes disponibles: api, mgp, ocr, ai"
     exit 0
 }
 
@@ -124,7 +124,7 @@ build_and_push() {
 IFS=',' read -ra COMPONENT_ARRAY <<< "$COMPONENTS"
 
 # Verificar componentes válidos
-VALID_COMPONENTS=("api" "mgp" "ocr")
+VALID_COMPONENTS=("api" "mgp" "ocr" "ai")
 for component in "${COMPONENT_ARRAY[@]}"; do
     if [[ ! " ${VALID_COMPONENTS[@]} " =~ " $component " ]]; then
         echo "❌ Error: Componente '$component' no válido"

@@ -106,19 +106,19 @@ check_service_running() {
 # Función para verificar si un modelo de Ollama está instalado
 check_ollama_model() {
     local model_name="$1"
-    local container_name="rund-ai"
-    
+    local container_name="rund-ollama"
+
     echo "🔍 Verificando modelo de IA: $model_name"
-    
-    if ! check_service_running "rund-ai"; then
-        echo "⚠️  Contenedor rund-ai no está ejecutándose, saltando configuración de modelo de IA"
+
+    if ! check_service_running "rund-ollama"; then
+        echo "⚠️  Contenedor rund-ollama no está ejecutándose, saltando configuración de modelo de IA"
         return 1
     fi
-    
+
     # Esperar a que Ollama esté completamente listo
     local max_attempts=15
     local attempt=1
-    
+
     while [ $attempt -le $max_attempts ]; do
         if docker exec "$container_name" ollama list 2>/dev/null | grep -q "$model_name"; then
             echo "✅ Modelo $model_name ya está instalado"
@@ -138,7 +138,7 @@ check_ollama_model() {
             ((attempt++))
         fi
     done
-    
+
     echo "❌ Timeout esperando que Ollama esté listo"
     return 1
 }
@@ -170,8 +170,18 @@ check_ocr_service() {
     return 1
 }
 
-# Verificar y configurar el modelo de IA
-check_ollama_model "phi3:mini"
+# Verificar y configurar los modelos de IA
+echo "🤖 Configurando modelos de IA..."
+check_ollama_model "nuextract"
+check_ollama_model "gemma2:2b"
+
+# Verificar que el servicio AI esté funcionando
+echo "🔍 Verificando servicio AI (rund-ai)..."
+if check_service_running "rund-ai"; then
+    echo "✅ Servicio rund-ai ejecutándose correctamente"
+else
+    echo "⚠️  Contenedor rund-ai no está ejecutándose"
+fi
 
 # Verificar que el servicio OCR esté funcionando
 check_ocr_service
@@ -236,24 +246,30 @@ echo ""
 echo "✅ Despliegue completado!"
 echo ""
 echo "🌐 URLs de acceso:"
-echo "   Frontend:  http://$BASE_URL:4000"
-echo "   API:       http://$BASE_URL:3000"
-echo "   OpenKM:    http://$BASE_URL:8080"
-echo "   Ollama AI: http://$BASE_URL:11434"
-echo "   OCR:       http://$BASE_URL:8000"
+echo "   Frontend:     http://$BASE_URL:4000"
+echo "   API:          http://$BASE_URL:3000"
+echo "   OpenKM:       http://$BASE_URL:8080"
+echo "   Ollama (LLM): http://$BASE_URL:11434"
+echo "   AI Service:   http://$BASE_URL:8001"
+echo "   OCR Service:  http://$BASE_URL:8000"
 echo ""
-echo "🤖 Modelo de IA configurado: phi3:mini"
+echo "🤖 Modelos de IA configurados:"
+echo "   - nuextract (extracción estructurada)"
+echo "   - gemma2:2b (análisis y resúmenes)"
 echo "📄 Servicio OCR: PaddleOCR con soporte para español e inglés"
 echo ""
 echo "📋 Comandos útiles:"
-echo "   Ver logs:           docker compose -f $COMPOSE_FILE logs -f"
-echo "   Ver logs de IA:     docker compose -f $COMPOSE_FILE logs -f rund-ai"
-echo "   Ver logs de OCR:    docker compose -f $COMPOSE_FILE logs -f rund-ocr"
-echo "   Detener servicios:  docker compose -f $COMPOSE_FILE down"
-echo "   Listar modelos IA:  docker exec rund-ai ollama list"
-echo "   Info OCR:           curl http://$BASE_URL:8000/info"
-echo "   Health OCR:         curl http://$BASE_URL:8000/health"
-echo "   Probar IA:          curl -X POST http://$BASE_URL:11434/api/generate -H 'Content-Type: application/json' -d '{\"model\":\"phi3:mini\",\"prompt\":\"Hola\",\"stream\":false}'"
-echo "   Probar OCR:         curl -X POST -F 'file=@documento.pdf' http://$BASE_URL:8000/extract-text"
+echo "   Ver logs:              docker compose -f $COMPOSE_FILE logs -f"
+echo "   Ver logs de Ollama:    docker compose -f $COMPOSE_FILE logs -f rund-ollama"
+echo "   Ver logs de AI:        docker compose -f $COMPOSE_FILE logs -f rund-ai"
+echo "   Ver logs de OCR:       docker compose -f $COMPOSE_FILE logs -f rund-ocr"
+echo "   Detener servicios:     docker compose -f $COMPOSE_FILE down"
+echo "   Listar modelos Ollama: docker exec rund-ollama ollama list"
+echo "   Info OCR:              curl http://$BASE_URL:8000/info"
+echo "   Health OCR:            curl http://$BASE_URL:8000/health"
+echo "   Health AI:             curl http://$BASE_URL:8001/health"
+echo "   Probar Ollama:         curl -X POST http://$BASE_URL:11434/api/generate -H 'Content-Type: application/json' -d '{\"model\":\"nuextract\",\"prompt\":\"Hola\",\"stream\":false}'"
+echo "   Probar OCR:            curl -X POST -F 'file=@documento.pdf' http://$BASE_URL:8000/extract-text"
+echo "   Probar AI:             curl -X POST http://$BASE_URL:8001/classify -H 'Content-Type: application/json' -d '{\"text\":\"Este es un certificado laboral\"}'"
 echo ""
 echo "💡 Nota: Los servicios de IA y OCR pueden tomar tiempo adicional para estar completamente listos"
