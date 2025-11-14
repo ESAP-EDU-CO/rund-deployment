@@ -6,7 +6,7 @@
 
 # ==================== CONFIGURACIÓN ====================
 CONTAINER_NAME="rund-core"
-COMPOSE_FILE="docker-compose.yml" # Cambia si tu archivo tiene otro nombre
+COMPOSE_FILE="" # Se detectará automáticamente o se puede especificar
 BACKUP_DIR="$HOME/backups/openkm"
 LOG_FILE="$BACKUP_DIR/restore.log"
 TOMCAT_PATH="/opt/tomcat"
@@ -19,15 +19,17 @@ show_help() {
   echo "Uso: $0 [OPCIONES] <archivo_backup>"
   echo ""
   echo "Opciones:"
-  echo "  -h, --help          Mostrar esta ayuda"
-  echo "  -f, --file         Especificar archivo de backup"
-  echo "  -c, --container    Nombre del contenedor (default: $CONTAINER_NAME)"
-  echo "  -d, --compose-dir  Directorio donde está docker-compose.yml"
-  echo "  --dry-run          Simular restauración sin ejecutar"
+  echo "  -h, --help              Mostrar esta ayuda"
+  echo "  -f, --file             Especificar archivo de backup"
+  echo "  -c, --container        Nombre del contenedor (default: $CONTAINER_NAME)"
+  echo "  -d, --compose-dir      Directorio donde está docker-compose.yml"
+  echo "  --compose-file         Especificar archivo docker-compose (default: auto-detectar)"
+  echo "  --dry-run              Simular restauración sin ejecutar"
   echo ""
   echo "Ejemplos:"
   echo "  $0 rund_openkm-data-backup-20250711_143052.tar"
   echo "  $0 -f ~/backups/openkm/rund_openkm-data-backup-20250711_143052.tar"
+  echo "  $0 --compose-file docker-compose.prod.yml backup.tar"
   echo "  $0 --dry-run rund_openkm-data-backup-20250711_143052.tar"
 }
 
@@ -37,6 +39,34 @@ log_message() {
   local message=$2
   local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
   echo "[$timestamp] [$level] $message" | tee -a "$LOG_FILE"
+}
+
+# Función para detectar el archivo docker-compose correcto
+detect_compose_file() {
+  # Si ya está especificado, usarlo
+  if [[ -n "$COMPOSE_FILE" ]]; then
+    if [[ -f "$COMPOSE_FILE" ]]; then
+      log_message "INFO" "Usando archivo compose especificado: $COMPOSE_FILE"
+      return 0
+    else
+      log_message "ERROR" "Archivo compose especificado no existe: $COMPOSE_FILE"
+      return 1
+    fi
+  fi
+
+  # Auto-detectar
+  if [[ -f "docker-compose.prod.yml" ]]; then
+    COMPOSE_FILE="docker-compose.prod.yml"
+    log_message "INFO" "Auto-detectado archivo compose: docker-compose.prod.yml"
+  elif [[ -f "docker-compose.yml" ]]; then
+    COMPOSE_FILE="docker-compose.yml"
+    log_message "INFO" "Auto-detectado archivo compose: docker-compose.yml"
+  else
+    log_message "ERROR" "No se encontró archivo docker-compose.yml o docker-compose.prod.yml"
+    return 1
+  fi
+
+  return 0
 }
 
 # Función para verificar prerrequisitos
@@ -131,7 +161,7 @@ stop_services() {
     COMPOSE_CMD="docker compose"
   fi
 
-  if $COMPOSE_CMD down; then
+  if $COMPOSE_CMD -f "$COMPOSE_FILE" down; then
     log_message "INFO" "Servicios detenidos correctamente"
     return 0
   else
@@ -150,7 +180,7 @@ start_services() {
     COMPOSE_CMD="docker compose"
   fi
 
-  if $COMPOSE_CMD up -d; then
+  if $COMPOSE_CMD -f "$COMPOSE_FILE" up -d; then
     log_message "INFO" "Servicios iniciados correctamente"
     return 0
   else
@@ -245,6 +275,10 @@ while [[ $# -gt 0 ]]; do
     COMPOSE_DIR="$2"
     shift 2
     ;;
+  --compose-file)
+    COMPOSE_FILE="$2"
+    shift 2
+    ;;
   --dry-run)
     DRY_RUN=true
     shift
@@ -296,6 +330,13 @@ log_message "INFO" "Archivo de backup: $BACKUP_FILE"
 log_message "INFO" "Contenedor: $CONTAINER_NAME"
 log_message "INFO" "Modo dry-run: $DRY_RUN"
 
+# Detectar archivo docker-compose
+if ! detect_compose_file; then
+  exit 1
+fi
+
+log_message "INFO" "Archivo docker-compose: $COMPOSE_FILE"
+
 # Verificar prerrequisitos
 if ! check_prerequisites; then
   exit 1
@@ -310,8 +351,8 @@ if [[ "$DRY_RUN" == "true" ]]; then
   log_message "INFO" "MODO DRY-RUN: La restauración sería exitosa"
   log_message "INFO" "Comandos que se ejecutarían:"
   log_message "INFO" "  1. Crear backup de seguridad"
-  log_message "INFO" "  2. Detener servicios con docker-compose down"
-  log_message "INFO" "  3. Iniciar servicios con docker-compose up -d"
+  log_message "INFO" "  2. Detener servicios con: docker compose -f $COMPOSE_FILE down"
+  log_message "INFO" "  3. Iniciar servicios con: docker compose -f $COMPOSE_FILE up -d"
   log_message "INFO" "  4. Copiar $BACKUP_FILE al contenedor"
   log_message "INFO" "  5. Extraer backup en $TOMCAT_PATH"
   log_message "INFO" "  6. Limpiar archivo temporal"

@@ -30,17 +30,17 @@ if [ "$ENVIRONMENT" = "prod" ]; then
     COMPOSE_FILE="docker-compose.prod.yml"
     ENV_FILE=".env.prod"
     BASE_URL="172.16.234.52"
-    
-    echo "📋 Verificando configuración de producción..."
-    
-    # Verificar que existe el archivo de entorno
+
+    echo "📋 Configuración de producción detectada"
+    echo "ℹ️  Las variables de entorno están definidas en docker-compose.prod.yml"
+
+    # El archivo .env.prod es opcional en producción
     if [ ! -f "$ENV_FILE" ]; then
-        echo "❌ Error: No se encuentra $ENV_FILE"
-        echo "💡 Copia $ENV_FILE.main y configúralo:"
-        echo "   cp $ENV_FILE.main $ENV_FILE"
-        exit 1
+        echo "💡 No se encontró $ENV_FILE (opcional)"
+        echo "   Las variables de entorno ya están en docker-compose.prod.yml"
+        ENV_FILE=""
     fi
-    
+
 elif [ "$ENVIRONMENT" = "local" ]; then
     COMPOSE_FILE="docker-compose.yml"
     ENV_FILE=".env"
@@ -83,9 +83,11 @@ fi
 
 # Levantar los servicios
 echo "🔄 Iniciando servicios..."
-if [ -f "$ENV_FILE" ]; then
+if [ -n "$ENV_FILE" ] && [ -f "$ENV_FILE" ]; then
+    echo "📋 Usando archivo de entorno: $ENV_FILE"
     docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d
 else
+    echo "📋 Usando variables de entorno del archivo compose"
     docker compose -f "$COMPOSE_FILE" up -d
 fi
 
