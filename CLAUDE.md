@@ -201,6 +201,9 @@ curl -X POST -F 'file=@documento.pdf' http://localhost:8000/extract-text
 # Health check
 curl http://localhost:8001/health
 
+# Info del servicio
+curl http://localhost:8001/info
+
 # Probar clasificación
 curl -X POST http://localhost:8001/classify \
   -H 'Content-Type: application/json' \
@@ -210,6 +213,32 @@ curl -X POST http://localhost:8001/classify \
 curl -X POST http://localhost:8001/extract \
   -H 'Content-Type: application/json' \
   -d '{"text":"texto","schema":"cedula"}'
+
+# Añadir batch de documentos a cola
+curl -X POST http://localhost:8001/queue/add-batch \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "documents": [
+      {
+        "document_id": "uuid-123",
+        "file_path": "/okm:root/RUND/DOCENTES/HOJAS_DE_VIDA/71799891/cedula.pdf",
+        "tipo_documento": "cedula"
+      }
+    ],
+    "callback_url": "http://rund-api:3000/api/v2/webhooks/extraction-complete"
+  }'
+
+# Consultar estado de un job
+curl http://localhost:8001/queue/job/uuid-123
+
+# Estadísticas de la cola
+curl http://localhost:8001/queue/stats
+
+# Estadísticas del índice de extracción
+curl http://localhost:8001/extraction/statistics
+
+# Documentos de un profesor
+curl http://localhost:8001/extraction/professor/71799891
 ```
 
 ### Ollama Service
@@ -375,7 +404,7 @@ OLLAMA_KEEP_ALIVE=5m
 ### Flujo de Integración
 
 ```
-Usuario (Angular) 
+Usuario (Angular)
     ↓
 RUND-API (PHP)
     ↓
@@ -385,6 +414,38 @@ RUND-OCR    RUND-AI      RUND-Core
     ↓            ↓
     └────→ RUND-Ollama
 ```
+
+### Arquitectura de Procesamiento Asíncrono (NUEVO)
+
+RUND-AI implementa un sistema de cola FIFO (First In, First Out) con workers en background para procesar grandes volúmenes de documentos de manera eficiente:
+
+**Componentes principales:**
+1. **ExtractionQueue**: Cola FIFO thread-safe (singleton)
+2. **ExtractionWorker**: Workers en threads paralelos (3 workers por defecto)
+3. **ExtractionJob**: Modelo de job con estados (queued → processing → completed/failed)
+4. **ExtractionIndexService**: Índice centralizado de documentos procesados
+
+**Flujo de procesamiento asíncrono:**
+```
+1. RUND-API envía batch → POST /queue/add-batch
+2. Jobs se encolan en ExtractionQueue (FIFO)
+3. Workers toman jobs de la cola (3 workers paralelos)
+4. Por cada job:
+   a. Descarga PDF desde OpenKM (vía rund-api)
+   b. Ejecuta OCR (rund-ocr)
+   c. Extracción estructurada (NuExtract via rund-ollama)
+   d. Guarda JSON side-car en OpenKM
+   e. Actualiza categorías en OpenKM
+   f. Actualiza índice de extracción
+5. RUND-API puede consultar estado → GET /queue/job/<id>
+```
+
+**Ventajas:**
+- Procesamiento paralelo de 3 documentos simultáneos
+- No bloquea la API (respuesta inmediata con 202 Accepted)
+- Sistema de reintentos automáticos (3 intentos máximo)
+- Métricas detalladas (tiempo OCR, tiempo AI, tiempo total)
+- Índice centralizado para consultas rápidas
 
 ### APIs REST Disponibles
 
@@ -397,13 +458,22 @@ POST /extract-text    - Extracción de texto (multipart/form-data)
 
 **RUND-AI** (Puerto 8001):
 ```
-GET  /health          - Health check
-GET  /info            - Información del servicio
-POST /classify        - Clasificación de documento
-POST /extract         - Extracción estructurada
-POST /search          - Búsqueda semántica
-POST /validate        - Validación de consistencia
-GET  /stats           - Estadísticas y tendencias
+# Endpoints principales
+GET  /health                            - Health check
+GET  /info                              - Información del servicio
+POST /classify                          - Clasificación de documento
+POST /extract                           - Extracción estructurada
+POST /search                            - Búsqueda semántica
+POST /validate                          - Validación de consistencia
+
+# Endpoints de cola de procesamiento (NUEVO)
+POST /queue/add-batch                   - Añadir batch de documentos a cola
+GET  /queue/stats                       - Estadísticas de la cola
+GET  /queue/job/<document_id>           - Estado de un job específico
+
+# Endpoints de índice de extracción (NUEVO)
+GET  /extraction/statistics             - Estadísticas generales del índice
+GET  /extraction/professor/<cedula>     - Documentos de un profesor
 ```
 
 **RUND-Ollama** (Puerto 11434):
@@ -413,18 +483,58 @@ POST /api/generate    - Generar con LLM
 POST /api/chat        - Chat con LLM
 ```
 
+### Schemas de Extracción Estructurada (IMPLEMENTADO)
+
+RUND-AI cuenta con **6 schemas completos** para extracción estructurada con NuExtract:
+
+1. **Cédula de Ciudadanía** (`cedula`)
+   - Prioridad: ALTA
+   - Campos: número, nombres, apellidos, fecha_nacimiento, fecha_expedicion, lugar_expedicion, sexo, rh
+   - Validaciones: número 6-10 dígitos, formatos de fecha
+
+2. **Certificado Laboral** (`certificado_laboral`)
+   - Prioridad: ALTA
+   - Campos: entidad_emisora, nombre_empleado, cedula, cargo, fecha_inicio, fecha_fin, salario, tipo_contrato, firmante
+   - Validaciones: rangos de fechas, formato salario
+
+3. **Certificado Académico** (`certificado_academico`)
+   - Prioridad: MEDIA
+   - Campos: institucion, tipo_titulo, titulo, nivel_educativo, fecha_grado, matricula_profesional
+   - Validaciones: niveles educativos válidos, formatos de fecha
+
+4. **Resolución de Nombramiento** (`resolucion`)
+   - Prioridad: ALTA
+   - Campos: numero_resolucion, fecha, entidad_emisora, nombre_docente, cargo, vigencia
+   - Validaciones: formato resolución ESAP
+
+5. **Acta de Evaluación Docente** (`acta`)
+   - Prioridad: MEDIA
+   - Campos: numero_acta, fecha, nombre_docente, periodo, evaluadores, resultados
+   - Validaciones: rangos de calificación, roles evaluadores
+
+6. **Certificado de Idiomas** (`certificado_idiomas`)
+   - Prioridad: BAJA
+   - Campos: institucion, idioma, nivel, fecha_certificacion, vigencia
+   - Validaciones: niveles MCER (A1-C2)
+
+**Ubicación del código:**
+- Schemas: [rund-ai/config/schemas.py](rund-ai/config/schemas.py)
+- Mapeos: [rund-ai/config/document_type_mapping.py](rund-ai/config/document_type_mapping.py)
+
 ### Esquemas de Datos (Ejemplos)
 
 **Cédula de Ciudadanía**:
 ```json
 {
-  "tipo": "cedula_ciudadania",
+  "tipo_documento": "CC",
   "numero": "1234567890",
   "nombres": "JUAN CARLOS",
   "apellidos": "PEREZ GOMEZ",
   "fecha_nacimiento": "1980-05-15",
   "fecha_expedicion": "2010-03-20",
-  "lugar_expedicion": "BOGOTA D.C."
+  "lugar_expedicion": "BOGOTA D.C.",
+  "sexo": "M",
+  "rh": "O+"
 }
 ```
 
@@ -439,9 +549,67 @@ POST /api/chat        - Chat con LLM
   "fecha_inicio": "2015-01-15",
   "fecha_fin": "2023-12-31",
   "salario": "5000000",
+  "tipo_contrato": "término_indefinido",
   "firmante": "Dr. María López - Decana"
 }
 ```
+
+### Índice de Extracción (extraction_index.json)
+
+El sistema mantiene un **índice centralizado** de todos los documentos procesados en OpenKM:
+
+**Ubicación:** `/okm:root/RUND/CONFIG/DATA/extraction_index.json`
+
+**Estructura:**
+```json
+{
+  "metadata": {
+    "version": "1.0",
+    "last_updated": "2025-11-26T10:30:00",
+    "total_documents": 150,
+    "total_professors": 45
+  },
+  "statistics": {
+    "by_status": {
+      "pendiente": 20,
+      "procesando": 5,
+      "completado": 120,
+      "error": 5
+    },
+    "by_category": {
+      "cedula": 45,
+      "certificado_laboral": 60,
+      "certificado_academico": 30,
+      "resolucion": 15
+    },
+    "by_confidence": {
+      "high": 100,    // > 85%
+      "medium": 40,   // 60-85%
+      "low": 10       // < 60%
+    },
+    "processing": {
+      "average_ocr_time": 12.5,
+      "average_ai_time": 8.3,
+      "average_total_time": 25.8,
+      "queue_size": 20
+    }
+  },
+  "documents": [...],
+  "professors": {
+    "71799891": {
+      "cedula": "71799891",
+      "total_documents": 4,
+      "documents": [...]
+    }
+  }
+}
+```
+
+**Ventajas del índice:**
+- Consultas rápidas sin necesidad de recorrer OpenKM
+- Estadísticas en tiempo real
+- Búsqueda por profesor (cédula)
+- Métricas de calidad y rendimiento
 
 ## 🐛 Troubleshooting
 
@@ -516,37 +684,60 @@ curl http://localhost:4000/health  # MGP
 - **ChromaDB**: https://docs.trychroma.com/
 - **Sentence Transformers**: https://www.sbert.net/
 
-## 🎯 Próximos Desarrollos
+## 🎯 Estado del Proyecto y Próximos Desarrollos
 
-### Fase Actual: Estructuración y Pruebas Básicas
-- Configuración de contenedores Docker
-- Integración Ollama + NuExtract
-- Schemas JSON para tipos de documentos
-- APIs REST básicas
+### ✅ Fase 1: COMPLETADA - Estructuración y Pruebas Básicas
+- ✅ Configuración de contenedores Docker
+- ✅ Integración Ollama + NuExtract
+- ✅ Schemas JSON para 6 tipos de documentos
+- ✅ APIs REST básicas
+- ✅ Sistema de cola FIFO con workers
+- ✅ Índice centralizado de extracción
 
-### Fase 2: OCR Optimizado
-- Templates para cédulas colombianas
-- Post-procesamiento y corrección
-- Detección de campos por posición
-- Validación con regex
+### ✅ Fase 2: COMPLETADA - Sistema de Procesamiento Asíncrono
+- ✅ Cola FIFO thread-safe (ExtractionQueue)
+- ✅ Workers en background (3 workers paralelos)
+- ✅ Sistema de jobs con estados (queued → processing → completed/failed)
+- ✅ Reintentos automáticos (máximo 3 intentos)
+- ✅ Métricas detalladas (tiempo OCR, AI, total)
+- ✅ Integración con rund-api para descarga/upload
 
-### Fase 3: Extracción Estructurada
-- Implementación de NuExtract
-- Schemas para 6-8 tipos de documentos
-- Validación de datos extraídos
-- API de extracción
+### ✅ Fase 3: COMPLETADA - Extracción Estructurada
+- ✅ Implementación de NuExtract
+- ✅ Schemas completos para 6 tipos de documentos:
+  - Cédula de Ciudadanía
+  - Certificado Laboral
+  - Certificado Académico
+  - Resolución de Nombramiento
+  - Acta de Evaluación Docente
+  - Certificado de Idiomas
+- ✅ Validación de datos extraídos
+- ✅ API de extracción (/extract)
+- ✅ Archivos JSON side-car en OpenKM
 
-### Fase 4: Clasificación y Validación
-- Clasificador automático
-- Validación de consistencia entre documentos
-- Detector de duplicados
-- Dashboard de validación
+### 🚧 Fase 4: EN PROGRESO - Clasificación y Validación
+- ⏳ Clasificador automático (API implementada, pendiente testing)
+- ⏳ Validación de consistencia entre documentos (API implementada)
+- ❌ Detector de duplicados
+- ❌ Dashboard de validación
 
-### Fase 5: Búsqueda y Análisis
-- Búsqueda semántica con ChromaDB
-- Análisis de tendencias
-- Reportes automatizados
-- Dashboard de estadísticas
+### 📋 Fase 5: PENDIENTE - OCR Optimizado
+- ❌ Templates para cédulas colombianas
+- ❌ Post-procesamiento y corrección
+- ❌ Detección de campos por posición
+- ❌ Validación con regex
+
+### 📋 Fase 6: PENDIENTE - Búsqueda y Análisis
+- ⏳ Búsqueda semántica con ChromaDB (API implementada, pendiente testing)
+- ❌ Análisis de tendencias
+- ❌ Reportes automatizados
+- ❌ Dashboard de estadísticas
+
+**Leyenda:**
+- ✅ Completado
+- 🚧 En progreso
+- ⏳ Implementado pero sin testing
+- ❌ Pendiente
 
 ## ⚠️ Notas Importantes
 
@@ -575,5 +766,13 @@ curl http://localhost:4000/health  # MGP
 
 ---
 
-**Última actualización**: 31 de octubre de 2025
-**Versión**: 2.0
+**Última actualización**: 26 de noviembre de 2025
+**Versión**: 3.0
+
+**Cambios en v3.0:**
+- ✅ Sistema de procesamiento asíncrono con cola FIFO
+- ✅ 6 schemas completos de extracción estructurada
+- ✅ Workers en background (3 paralelos)
+- ✅ Índice centralizado de documentos procesados
+- ✅ Integración completa con rund-api
+- ✅ Métricas y estadísticas detalladas
