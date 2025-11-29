@@ -1,0 +1,45 @@
+flowchart TB
+    subgraph Usuarios["👥 Usuarios"]
+        P[("👨‍🏫 Profesor")]
+        G[("👔 Gestor Profesoral")]
+        A[("🔧 Administrador")]
+    end
+
+    subgraph Acceso["🌐 Canales de Acceso"]
+        RI["🏢 Red Interna ESAP"]
+        VPN["🔐 VPN Institucional"]
+    end
+
+    subgraph RUND["📦 Sistema RUND"]
+        MGP["🖥️ Portal Web<br/>(RUND-MGP)"]
+        API["⚙️ API Backend<br/>(RUND-API)"]
+        CORE["📁 Repositorio<br/>(RUND-CORE)"]
+        AUTH["🔑 Autenticación<br/>(RUND-AUTH)"]
+    end
+
+    subgraph Externos["☁️ Servicios Externos"]
+        ENTRA["🔷 Microsoft<br/>Entra ID"]
+    end
+
+    P --> RI
+    P --> VPN
+    G --> RI
+    A --> RI
+
+    VPN --> RI
+    RI --> MGP
+
+    MGP <--> API
+    API <--> CORE
+    MGP <--> AUTH
+    AUTH <--> ENTRA
+
+    classDef usuario fill:#e1f5fe,stroke:#01579b
+    classDef acceso fill:#fff3e0,stroke:#e65100
+    classDef sistema fill:#e8f5e9,stroke:#2e7d32
+    classDef externo fill:#fce4ec,stroke:#c2185b
+
+    class P,G,A usuario
+    class RI,VPN acceso
+    class MGP,API,CORE,AUTH sistema
+    class ENTRA externo

@@ -1,0 +1,43 @@
+sequenceDiagram
+    autonumber
+    participant U as 👤 Usuario
+    participant MGP as 🖥️ RUND-MGP
+    participant AUTH as 🔑 RUND-AUTH
+    participant ENTRA as 🔷 Microsoft Entra ID
+    participant API as ⚙️ RUND-API
+    participant CORE as 📁 RUND-CORE
+
+    Note over U,CORE: ✅ FLUJO PLANIFICADO: OAuth 2.0 + JWT
+
+    U->>MGP: 1. Accede al portal
+    MGP->>AUTH: 2. Verificar sesión
+    AUTH-->>MGP: 3. No hay sesión válida
+    MGP->>U: 4. Redirige a login
+
+    U->>AUTH: 5. Inicia login
+    AUTH->>ENTRA: 6. Authorization Request
+    ENTRA->>U: 7. Página de login Microsoft
+    U->>ENTRA: 8. Credenciales corporativas
+    ENTRA->>AUTH: 9. Authorization Code
+    AUTH->>ENTRA: 10. Token Request
+    ENTRA-->>AUTH: 11. ID Token + Access Token
+
+    AUTH->>AUTH: 12. Genera JWT interno
+    Note right of AUTH: JWT incluye sub, roles, exp, aud
+
+    AUTH-->>MGP: 13. JWT Token
+    MGP->>MGP: 14. Almacena token (memoria)
+    MGP-->>U: 15. Sesión iniciada
+
+    U->>MGP: 16. Solicita datos
+    MGP->>API: 17. GET /api/v2/profesores/{cedula} Authorization: Bearer JWT
+
+    API->>API: 18. Valida JWT
+    Note right of API: Verifica Firma, Expiración, Audiencia, Roles
+
+    API->>CORE: 19. GET /OpenKM/... Authorization: Basic env vars
+    CORE-->>API: 20. Datos
+    API-->>MGP: 21. JSON Response
+    MGP-->>U: 22. Muestra información
+
+    Note over U,CORE: 🔄 Refresh Token cada 15 min

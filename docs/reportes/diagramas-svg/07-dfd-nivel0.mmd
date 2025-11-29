@@ -1,0 +1,15 @@
+flowchart LR
+    U["👤 Usuario"]
+
+    RUND(("📦 Sistema<br/>RUND"))
+
+    DB[("💾 Repositorio<br/>Documental")]
+    IDP["🔷 Proveedor<br/>de Identidad"]
+
+    U -->|"1. Solicita acceso"| RUND
+    RUND -->|"2. Valida identidad"| IDP
+    IDP -->|"3. Token de sesión"| RUND
+    RUND -->|"4. Respuesta"| U
+
+    U -->|"5. Consulta/Gestiona datos"| RUND
+    RUND <-->|"6. Lee/Escribe documentos"| DB

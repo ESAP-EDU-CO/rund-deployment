@@ -1,0 +1,34 @@
+flowchart TB
+    subgraph Legend["📋 Leyenda"]
+        L1["🟢 Autenticado"]
+        L2["🟡 Auth Pendiente"]
+        L3["🔴 Sin Auth"]
+    end
+
+    subgraph Matrix["📊 Matriz de Comunicaciones"]
+        MGP["rund-mgp<br/>:4000"]
+        AUTH["rund-auth<br/>:4100"]
+        API["rund-api<br/>:3000"]
+        CORE["rund-core<br/>:8080"]
+        AI["rund-ai<br/>:8001"]
+        OCR["rund-ocr<br/>:8000"]
+        OLLAMA["rund-ollama<br/>:11434"]
+    end
+
+    MGP -->|"🟡 JWT pendiente"| API
+    MGP -->|"🟢 OAuth flow"| AUTH
+    API -->|"🟢 Basic Auth*"| CORE
+    API -->|"🔴 Sin auth"| AI
+    API -->|"🔴 Sin auth"| OCR
+    API -->|"🔴 Sin auth"| OLLAMA
+    AI -->|"🔴 Sin auth"| OLLAMA
+    AI -->|"🔴 Sin auth"| OCR
+    AI -->|"🔴 Sin auth"| API
+
+    classDef green fill:#c8e6c9,stroke:#2e7d32
+    classDef yellow fill:#fff9c4,stroke:#f9a825
+    classDef red fill:#ffcdd2,stroke:#c62828
+
+    class AUTH green
+    class MGP,CORE yellow
+    class AI,OCR,OLLAMA red

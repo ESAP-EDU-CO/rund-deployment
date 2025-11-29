@@ -1,0 +1,52 @@
+flowchart TB
+    subgraph Actores["👥 Actores"]
+        U["👤 Usuario"]
+    end
+
+    subgraph Trust_Boundary["🔒 Límite de Confianza - Red ESAP"]
+        subgraph Frontend["Capa de Presentación"]
+            P1(("1.0<br/>Portal Web<br/>RUND-MGP"))
+        end
+
+        subgraph Auth["Capa de Autenticación"]
+            P2(("2.0<br/>Autenticación<br/>RUND-AUTH"))
+        end
+
+        subgraph Backend["Capa de Negocio"]
+            P3(("3.0<br/>API REST<br/>RUND-API"))
+        end
+
+        subgraph AI_Layer["Capa de IA (Experimental)"]
+            P4(("4.0<br/>Procesamiento<br/>RUND-AI"))
+            P5(("5.0<br/>OCR<br/>RUND-OCR"))
+        end
+
+        subgraph Storage["Capa de Datos"]
+            DB1[("📁 OpenKM<br/>Documentos")]
+            DB2[("🧠 ChromaDB<br/>Vectores")]
+        end
+    end
+
+    subgraph External["☁️ Externos"]
+        IDP["🔷 Microsoft<br/>Entra ID"]
+    end
+
+    U -->|"F1: HTTP Request"| P1
+    P1 -->|"F2: Auth Request"| P2
+    P2 <-->|"F3: OAuth 2.0"| IDP
+    P2 -->|"F4: JWT Token"| P1
+    P1 -->|"F5: API Call + JWT"| P3
+    P3 -->|"F6: CRUD Docs"| DB1
+    P3 -->|"F7: Extract Request"| P4
+    P4 -->|"F8: OCR Request"| P5
+    P4 -->|"F9: Store Vectors"| DB2
+    P3 -->|"F10: Response"| P1
+    P1 -->|"F11: HTML/JSON"| U
+
+    classDef proceso fill:#bbdefb,stroke:#1976d2,stroke-width:2px
+    classDef storage fill:#c8e6c9,stroke:#388e3c,stroke-width:2px
+    classDef externo fill:#ffcdd2,stroke:#d32f2f,stroke-width:2px
+
+    class P1,P2,P3,P4,P5 proceso
+    class DB1,DB2 storage
+    class IDP externo

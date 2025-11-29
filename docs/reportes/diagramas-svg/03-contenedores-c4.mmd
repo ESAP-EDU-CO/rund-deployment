@@ -1,0 +1,27 @@
+C4Container
+    title Sistema RUND - Diagrama de Contenedores (Ambiente UAT)
+
+    Person(usuario, "Usuario ESAP", "Profesor, Gestor o Administrador")
+
+    System_Boundary(docker, "Servidor Docker - 172.16.234.52") {
+        Container(mgp, "RUND-MGP", "Angular 20 + SSR", "Portal web principal<br/>Puerto: 4000")
+        Container(auth, "RUND-AUTH", "Node.js + Express", "Servicio de autenticación<br/>Puerto: 4100")
+        Container(api, "RUND-API", "PHP 8.3 + Apache", "API REST Backend<br/>Puerto: 3000")
+        Container(core, "RUND-CORE", "OpenKM CE (Java)", "Repositorio documental<br/>Puerto: 8080")
+
+        Container(ai, "RUND-AI", "Python + Flask", "Procesamiento IA<br/>Puerto: 8001", $tags="experimental")
+        Container(ocr, "RUND-OCR", "Python + PaddleOCR", "Extracción de texto<br/>Puerto: 8000", $tags="experimental")
+        Container(ollama, "RUND-OLLAMA", "Ollama Engine", "Modelos LLM<br/>Puerto: 11434", $tags="experimental")
+    }
+
+    System_Ext(entra, "Microsoft Entra ID", "Proveedor de identidad")
+
+    Rel(usuario, mgp, "Accede via navegador", "HTTP :4000")
+    Rel(mgp, api, "Consume API", "HTTP :3000")
+    Rel(mgp, auth, "Solicita autenticación", "HTTP :4100")
+    Rel(auth, entra, "Valida credenciales", "OAuth 2.0")
+    Rel(api, core, "Gestiona documentos", "HTTP :8080")
+    Rel(api, ai, "Procesamiento IA", "HTTP :8001")
+    Rel(api, ocr, "Extracción OCR", "HTTP :8000")
+    Rel(ai, ollama, "Inferencia LLM", "HTTP :11434")
+    Rel(ai, ocr, "Pipeline OCR", "HTTP :8000")

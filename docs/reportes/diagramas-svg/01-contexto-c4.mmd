@@ -1,0 +1,23 @@
+C4Context
+    title Sistema RUND - Diagrama de Contexto
+
+    Person(profesor, "Profesor ESAP", "Consulta su información académica y documentos")
+    Person(gestor, "Gestor Profesoral", "Administra información de profesores")
+    Person(admin, "Administrador", "Configura y mantiene el sistema")
+
+    System_Boundary(rund, "Sistema RUND") {
+        System(rund_system, "RUND", "Sistema de Gestión Documental Profesoral")
+    }
+
+    System_Ext(entra_id, "Microsoft Entra ID", "Servicio de autenticación corporativo")
+    System_Ext(vpn, "VPN ESAP", "Acceso remoto seguro")
+    System_Ext(red_interna, "Red Interna ESAP", "Infraestructura de red institucional")
+
+    Rel(profesor, rund_system, "Consulta información", "HTTPS")
+    Rel(gestor, rund_system, "Gestiona profesores", "HTTPS")
+    Rel(admin, rund_system, "Administra sistema", "HTTPS")
+
+    Rel(rund_system, entra_id, "Autentica usuarios", "OAuth 2.0 / OIDC")
+    Rel(profesor, vpn, "Acceso remoto")
+    Rel(vpn, red_interna, "Conecta a")
+    Rel(red_interna, rund_system, "Acceso interno")

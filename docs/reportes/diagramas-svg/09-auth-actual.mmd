@@ -1,0 +1,19 @@
+sequenceDiagram
+    autonumber
+    participant U as 👤 Usuario
+    participant MGP as 🖥️ RUND-MGP
+    participant API as ⚙️ RUND-API
+    participant CORE as 📁 RUND-CORE
+
+    Note over U,CORE: ⚠️ ESTADO ACTUAL: Sin autenticación
+
+    U->>MGP: Accede al portal
+    MGP->>API: GET /api/v2/profesores/{cedula}
+    Note right of API: AuthMiddleware.authenticate() return true (Bypass)
+    API->>CORE: GET /OpenKM/... Authorization: Basic okmAdmin:admin
+    Note right of CORE: Credenciales hardcoded
+    CORE-->>API: Datos del profesor
+    API-->>MGP: JSON Response
+    MGP-->>U: Muestra información
+
+    Note over U,CORE: ❌ Cualquier usuario puede acceder a cualquier dato

@@ -1,0 +1,23 @@
+flowchart LR
+    subgraph JWT["🔐 JSON Web Token"]
+        subgraph Header["Header"]
+            H1["alg: RS256"]
+            H2["typ: JWT"]
+        end
+
+        subgraph Payload["Payload"]
+            P1["sub: usuario@esap.edu.co"]
+            P2["name: Nombre Completo"]
+            P3["roles: ['profesor', 'gestor']"]
+            P4["cedula: 12345678"]
+            P5["territorial: BOGOTA"]
+            P6["iat: 1732712400"]
+            P7["exp: 1732716000"]
+            P8["aud: rund-api"]
+            P9["iss: rund-auth"]
+        end
+
+        subgraph Signature["Signature"]
+            S1["RS256(<br/>header + payload,<br/>private_key<br/>)"]
+        end
+    end

@@ -1,0 +1,32 @@
+flowchart LR
+    subgraph Exposed["🌐 Puertos Expuestos al Host"]
+        P4000["📍 4000<br/>RUND-MGP<br/>Frontend"]
+        P4100["📍 4100<br/>RUND-AUTH<br/>Autenticación"]
+        P3000["📍 3000<br/>RUND-API<br/>Backend"]
+        P8080["📍 8080<br/>RUND-CORE<br/>OpenKM Admin"]
+        P8001["📍 8001<br/>RUND-AI<br/>⚠️ Interno"]
+        P8000["📍 8000<br/>RUND-OCR<br/>⚠️ Interno"]
+        P11434["📍 11434<br/>RUND-OLLAMA<br/>⚠️ Interno"]
+    end
+
+    subgraph Access["🔐 Nivel de Acceso Recomendado"]
+        Public["✅ Acceso Usuario"]
+        Admin["🔧 Solo Admin"]
+        Internal["⛔ Solo Interno"]
+    end
+
+    P4000 --> Public
+    P4100 --> Public
+    P3000 --> Public
+    P8080 --> Admin
+    P8001 --> Internal
+    P8000 --> Internal
+    P11434 --> Internal
+
+    classDef public fill:#c8e6c9,stroke:#2e7d32
+    classDef admin fill:#fff9c4,stroke:#f9a825
+    classDef internal fill:#ffcdd2,stroke:#c62828
+
+    class P4000,P4100,P3000 public
+    class P8080 admin
+    class P8001,P8000,P11434 internal

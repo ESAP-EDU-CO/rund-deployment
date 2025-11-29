@@ -1,0 +1,56 @@
+flowchart TB
+    subgraph Internet["☁️ Internet"]
+        ExtUser["👤 Usuario Externo"]
+    end
+
+    subgraph ESAP["🏛️ Red ESAP"]
+        subgraph DMZ["🛡️ Zona DMZ"]
+            VPN["🔐 Servidor VPN"]
+        end
+
+        subgraph Internal["🔒 Red Interna (172.16.x.x)"]
+            IntUser["👤 Usuario Interno"]
+
+            subgraph DockerHost["🖥️ Servidor Docker<br/>172.16.234.52"]
+                subgraph DockerNet["🐳 rund-network (bridge)"]
+                    direction TB
+                    C1["rund-mgp<br/>:4000"]
+                    C2["rund-auth<br/>:4100"]
+                    C3["rund-api<br/>:3000"]
+                    C4["rund-core<br/>:8080"]
+                    C5["rund-ai<br/>:8001"]
+                    C6["rund-ocr<br/>:8000"]
+                    C7["rund-ollama<br/>:11434"]
+                end
+            end
+        end
+    end
+
+    subgraph Azure["☁️ Microsoft Azure"]
+        EntraID["🔷 Entra ID"]
+    end
+
+    ExtUser -->|"VPN Connection"| VPN
+    VPN -->|"Tunnel"| Internal
+    IntUser -->|"HTTP"| DockerHost
+
+    C1 <--> C2
+    C1 <--> C3
+    C3 <--> C4
+    C3 <--> C5
+    C3 <--> C6
+    C5 <--> C6
+    C5 <--> C7
+    C2 <-->|"HTTPS :443"| EntraID
+
+    classDef internet fill:#ffcdd2,stroke:#c62828
+    classDef dmz fill:#fff3e0,stroke:#ef6c00
+    classDef internal fill:#e8f5e9,stroke:#2e7d32
+    classDef docker fill:#e3f2fd,stroke:#1565c0
+    classDef azure fill:#e1f5fe,stroke:#0277bd
+
+    class ExtUser internet
+    class VPN dmz
+    class IntUser,DockerHost internal
+    class C1,C2,C3,C4,C5,C6,C7 docker
+    class EntraID azure
