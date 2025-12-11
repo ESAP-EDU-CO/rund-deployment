@@ -27,6 +27,12 @@ RUND es una aplicación basada en microservicios Docker que consiste en:
   - Lenguaje: TypeScript/JavaScript
   - Framework: Angular 20
 
+- **rund-auth**: Servicio de Autenticación Centralizado (Node.js 20+)
+  - Puerto: 8081
+  - Stack: Express.js, TypeScript, Redis, PostgreSQL
+  - Autenticación: LDAP, OAuth 2.0 (Azure AD), JWT (RS256)
+  - Documentación: [rund-auth/README.md](rund-auth/README.md)
+
 - **rund-ollama**: Motor LLM (anteriormente rund-ai)
   - Puerto: 11434
   - Imagen: ollama/ollama:latest
@@ -43,6 +49,16 @@ RUND es una aplicación basada en microservicios Docker que consiste en:
   - Motor: PaddleOCR
   - Idiomas: Español e Inglés
   - Límite de archivo: 50MB
+
+- **redis**: Cache y almacenamiento de sesiones
+  - Puerto: 6379
+  - Imagen: redis:7-alpine
+  - Volumen: redis-data
+
+- **postgres**: Base de datos PostgreSQL
+  - Puerto: 5433
+  - Imagen: postgres:16-alpine
+  - Volumen: postgres-data
 
 Todos los servicios se comunican a través de una red Docker bridge (`rund-network`) y usan nombres de contenedor internos para comunicación servicio-a-servicio.
 
@@ -303,6 +319,110 @@ OLLAMA_ORIGINS=*
 OLLAMA_KEEP_ALIVE=5m
 ```
 
+### RUND-AUTH
+```env
+# Aplicación
+APP_BASE_URL=http://localhost:8081
+APP_BASE_URL_UI=http://localhost:4000
+SESSION_SECRET=change_me_long_random
+COOKIE_DOMAIN=localhost
+COOKIE_SECURE=false
+
+# JWT Interno
+INTERNAL_JWT_ISS=rund-auth
+INTERNAL_JWT_AUD=rund-api,rund-mgp
+INTERNAL_JWT_TTL_SECONDS=900
+JWK_PRIVATE_SET_PATH=/keys/jwks-private.json
+JWK_PUBLIC_SET_PATH=/keys/jwks-public.json
+
+# Redis y PostgreSQL
+REDIS_URL=redis://rund-redis:6379/0
+DATABASE_URL=postgresql://user:pass@rund-postgres:5432/rund_auth
+
+# LDAP (ESAP Active Directory)
+LDAP_ENABLED=true
+LDAP_URL=ldap://esap.edu.int:389
+LDAP_BASE_DN=OU=USUARIOS,DC=esap,DC=edu,DC=int
+LDAP_BIND_DN=ldap@esap.edu.int
+LDAP_BIND_PASSWORD=Esap.2020
+LDAP_LOGIN_ATTRIBUTE=sAMAccountName
+
+# OAuth 2.0 / Azure AD (Opcional)
+OIDC_ENABLED=false
+AZURE_TENANT_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+AZURE_CLIENT_ID=yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy
+AZURE_CLIENT_SECRET=supersecret
+
+# Modo desarrollo
+DEV_FAKE_LOGIN=true
+```
+
+## 🔐 Autenticación y Seguridad (RUND-AUTH)
+
+### Métodos de Autenticación
+
+**rund-auth** proporciona tres métodos de autenticación:
+
+1. **LDAP** (Active Directory de ESAP)
+   - Usuarios: ~1777 docentes
+   - Atributos: displayName, mail, employeeID, description
+   - Filtro: Solo cuentas activas con correo @esap.edu.co
+
+2. **OAuth 2.0 / OIDC** (Azure AD / Entra ID)
+   - Flujo: Authorization Code con PKCE
+   - Scopes: openid, profile, email, offline_access
+   - Callback: `APP_BASE_URL/oauth/callback`
+
+3. **Desarrollo** (Fake Login)
+   - Solo habilitado con `DEV_FAKE_LOGIN=true`
+   - Endpoint: `/dev/login?email=test@esap.edu.co`
+
+### JWT Internos
+
+Los JWT generados por rund-auth tienen:
+
+- **Algoritmo**: RS256 (clave privada/pública)
+- **Issuer**: `rund-auth`
+- **Audience**: `rund-api`, `rund-mgp`
+- **TTL**: 900 segundos (15 minutos)
+- **Claims**: sub, email, roles, wl_ver, iss, aud, iat, exp
+
+**Clave pública JWKS**: `http://rund-auth:8080/.well-known/jwks.json`
+
+### Flujo de Autenticación
+
+```
+1. Frontend → POST /ldap/login {username, password}
+2. rund-auth → Valida contra LDAP/AD de ESAP
+3. rund-auth → Genera JWT firmado con RS256
+4. rund-auth → Guarda sesión en Redis (8 horas)
+5. Frontend ← Recibe {user, internal_jwt}
+6. Frontend → Usa JWT en header Authorization: Bearer <token>
+7. rund-api → Valida JWT con JWKS público
+8. rund-api → Procesa request si token válido
+```
+
+### Integración en Servicios Backend
+
+Ejemplo de validación de JWT en Node.js:
+
+```javascript
+import { createRemoteJWKSet, jwtVerify } from 'jose'
+
+const JWKS = createRemoteJWKSet(
+  new URL('http://rund-auth:8080/.well-known/jwks.json')
+)
+
+const { payload } = await jwtVerify(token, JWKS, {
+  issuer: 'rund-auth',
+  audience: 'rund-api'
+})
+
+console.log(payload.email) // usuario@esap.edu.co
+```
+
+Ver [rund-auth/README.md](rund-auth/README.md) para documentación completa.
+
 ## 🎓 Conceptos de IA Aplicados
 
 ### Extracción Estructurada (NuExtract)
@@ -352,10 +472,13 @@ OLLAMA_KEEP_ALIVE=5m
 | rund-core (OpenKM) | 2-3GB | 10GB | Bajo | - |
 | rund-api (PHP) | 512MB | 2GB | Medio | 100-500ms |
 | rund-mgp (Angular) | 512MB | 1GB | Bajo | - |
+| rund-auth (Node.js) | 256MB | 500MB | Bajo | 50-200ms |
+| redis (Cache) | 128MB | 200MB | Bajo | <10ms |
+| postgres (DB) | 256MB | 500MB | Bajo | <50ms |
 | rund-ollama (LLM) | 4-6GB | 6GB | Alto | 5-20s |
 | rund-ai (Python) | 2GB | 2GB | Medio | 0.1-10s |
 | rund-ocr (PaddleOCR) | 1-2GB | 1GB | Medio-Alto | 30-60s |
-| **TOTAL** | **10-14GB** | **22GB** | - | - |
+| **TOTAL** | **11-15GB** | **24GB** | - | - |
 
 ### Capacidad de Procesamiento
 
@@ -383,6 +506,15 @@ OLLAMA_KEEP_ALIVE=5m
 - Lenguaje: TypeScript
 - SSR: Sí (Server-Side Rendering)
 - Estilos: SCSS
+
+**Auth Service (RUND-AUTH)**:
+- Lenguaje: TypeScript (Node.js 20+)
+- Framework: Express.js
+- Autenticación: LDAP (ldapts), OAuth 2.0 (openid-client)
+- JWT: jose (RS256)
+- Sesiones: Redis (ioredis), express-session
+- Seguridad: helmet, cors
+- Validación: zod
 
 **AI Service (RUND-AI)**:
 - Lenguaje: Python 3.9+

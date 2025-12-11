@@ -211,6 +211,73 @@ services:
           memory: 1G
           cpus: "1.0"
 
+  redis:
+    image: redis:7-alpine
+    container_name: rund-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - rund-network
+    environment:
+      - TZ=America/Bogota
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: rund-postgres
+    restart: unless-stopped
+    environment:
+      - TZ=America/Bogota
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=pass
+      - POSTGRES_DB=rund_auth
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    networks:
+      - rund-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d rund_auth"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rund-auth:
+    # Imagen desde Docker Hub
+    image: ocastelblanco/rund-auth:latest
+    container_name: rund-auth
+    restart: unless-stopped
+    env_file:
+      - ./rund-auth/.env
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./keys:/keys:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    networks:
+      - rund-network
+    environment:
+      - TZ=America/Bogota
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
 networks:
   rund-network:
     driver: bridge
@@ -232,4 +299,10 @@ volumes:
     driver: local
   # Volumen para cache de ChromaDB
   ai-cache:
+    driver: local
+  # Volumen para datos de Redis (rund-auth)
+  redis-data:
+    driver: local
+  # Volumen para datos de PostgreSQL (rund-auth)
+  postgres-data:
     driver: local

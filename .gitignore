@@ -9,6 +9,10 @@ rund-*/
 .env.local
 .env.prod
 
+# Claves de autenticación JWT (rund-auth)
+keys/jwks-private.json
+keys/jwks-public.json
+
 # Logs y archivos temporales
 logs/
 tmp/
