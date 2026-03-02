@@ -43,3 +43,6 @@ scripts/backups/
 # Tests y documentación interna
 tests/
 mejoras/
+
+# Oh My Claude
+.omc/

@@ -1,0 +1,310 @@
+<!--
+  TEMPLATE: Tarjeta de Contenido Accesible
+
+  Este template demuestra las mejores practicas para cards interactivas
+  incluyendo imagen con alt, texto truncado, y estados hover/focus.
+
+  Reglas aplicadas:
+  - A005: Texto alternativo en imagenes
+  - I001: Dimensiones explicitas en imagenes
+  - C001: Manejo de texto largo (truncate, line-clamp)
+  - C003: Estados vacios
+  - HV001: Estados hover
+  - F001: Focus visible
+-->
+
+<!-- ============================================== -->
+<!-- CARD BASICA -->
+<!-- ============================================== -->
+
+<article class="card">
+  <img
+    src="https://placehold.co/400x200"
+    alt="Descripcion significativa de la imagen del producto"
+    width="400"
+    height="200"
+    loading="lazy"
+    class="card-image"
+  >
+  <div class="card-content">
+    <h3 class="card-title">Titulo del producto</h3>
+    <p class="card-description">
+      Esta es una descripcion breve del producto que se truncara
+      si excede las dos lineas permitidas en el diseno.
+    </p>
+    <div class="card-footer">
+      <span class="card-price">$99.00</span>
+      <button type="button" class="btn btn-primary btn-sm">
+        Agregar al carrito
+      </button>
+    </div>
+  </div>
+</article>
+
+<!-- ============================================== -->
+<!-- CARD INTERACTIVA (Clickeable) -->
+<!-- ============================================== -->
+
+<article class="card card-interactive">
+  <a href="/producto/123" class="card-link" aria-label="Ver detalles de Titulo del producto">
+    <img
+      src="https://placehold.co/400x200"
+      alt=""
+      width="400"
+      height="200"
+      loading="lazy"
+      class="card-image"
+    >
+    <div class="card-content">
+      <h3 class="card-title">Titulo del producto</h3>
+      <p class="card-description">
+        Descripcion breve que sera truncada automaticamente
+        despues de dos lineas de texto para mantener uniformidad.
+      </p>
+      <span class="card-price">$149.00</span>
+    </div>
+  </a>
+</article>
+
+<!-- ============================================== -->
+<!-- CARD CON ESTADO VACIO -->
+<!-- ============================================== -->
+
+<article class="card card-empty">
+  <div class="card-empty-content">
+    <svg class="card-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+    </svg>
+    <p>No hay productos disponibles</p>
+    <button type="button" class="btn btn-outline btn-sm">
+      Explorar catalogo
+    </button>
+  </div>
+</article>
+
+<style>
+/* ============================================== */
+/* ESTILOS DE CARD */
+/* ============================================== */
+
+.card {
+  background: white;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+/* Card interactiva (toda la card es clickeable) */
+.card-interactive {
+  position: relative;
+}
+
+.card-interactive:hover {
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.card-interactive:focus-within {
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
+}
+
+.card-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+
+.card-link:focus {
+  outline: none;
+}
+
+/* Imagen */
+.card-image {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 2 / 1;
+  object-fit: cover;
+  background-color: #f3f4f6; /* Placeholder color */
+}
+
+/* Contenido */
+.card-content {
+  padding: 1.25rem;
+}
+
+/* Titulo */
+.card-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #111827;
+  line-height: 1.4;
+
+  /* Truncar a una linea */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Descripcion */
+.card-description {
+  margin: 0 0 1rem;
+  font-size: 0.875rem;
+  color: #6b7280;
+  line-height: 1.5;
+
+  /* Truncar a 2 lineas */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Precio - numeros tabulares */
+.card-price {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #111827;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Footer */
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+/* ============================================== */
+/* CARD VACIA */
+/* ============================================== */
+
+.card-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 16rem;
+  background: #f9fafb;
+  border: 2px dashed #d1d5db;
+}
+
+.card-empty-content {
+  text-align: center;
+  padding: 2rem;
+  color: #6b7280;
+}
+
+.card-empty-icon {
+  width: 3rem;
+  height: 3rem;
+  margin: 0 auto 1rem;
+  opacity: 0.5;
+}
+
+.card-empty-content p {
+  margin: 0 0 1rem;
+}
+
+/* ============================================== */
+/* BOTONES */
+/* ============================================== */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.625rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-sm {
+  padding: 0.5rem 1rem;
+  font-size: 0.8125rem;
+}
+
+.btn-primary {
+  background: #3b82f6;
+  color: white;
+  border: none;
+}
+
+.btn-primary:hover {
+  background: #2563eb;
+}
+
+.btn-primary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
+}
+
+.btn-outline {
+  background: transparent;
+  color: #3b82f6;
+  border: 1px solid #3b82f6;
+}
+
+.btn-outline:hover {
+  background: #eff6ff;
+}
+
+.btn-outline:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
+}
+
+/* ============================================== */
+/* DARK MODE */
+/* ============================================== */
+
+@media (prefers-color-scheme: dark) {
+  .card {
+    background: #1f2937;
+  }
+
+  .card-title {
+    color: #f9fafb;
+  }
+
+  .card-description {
+    color: #9ca3af;
+  }
+
+  .card-price {
+    color: #f9fafb;
+  }
+
+  .card-footer {
+    border-top-color: #374151;
+  }
+
+  .card-image {
+    background-color: #374151;
+  }
+
+  .card-empty {
+    background: #111827;
+    border-color: #374151;
+  }
+}
+
+/* ============================================== */
+/* REDUCED MOTION */
+/* ============================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .card-interactive,
+  .btn {
+    transition: none;
+  }
+}
+</style>

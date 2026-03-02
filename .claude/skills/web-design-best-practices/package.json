@@ -1,0 +1,107 @@
+{
+  "name": "web-design-best-practices",
+  "version": "1.0.0",
+  "description": "Guia completa de mejores practicas para diseno y desarrollo UI/UX web",
+  "author": "Basado en Vercel Web Interface Guidelines y comunidad",
+  "license": "MIT",
+  "skillFormat": "1.0",
+  "language": "es",
+  "keywords": [
+    "ui",
+    "ux",
+    "web-design",
+    "accessibility",
+    "a11y",
+    "tailwind",
+    "css",
+    "responsive",
+    "dark-mode",
+    "best-practices"
+  ],
+  "categories": {
+    "accesibilidad": {
+      "id": "01-accesibilidad",
+      "rulesCount": 10,
+      "description": "Reglas de accesibilidad web (WCAG)"
+    },
+    "focus-estados": {
+      "id": "02-focus-estados",
+      "rulesCount": 6,
+      "description": "Estados de focus y retroalimentacion visual"
+    },
+    "formularios": {
+      "id": "03-formularios",
+      "rulesCount": 11,
+      "description": "Formularios accesibles y usables"
+    },
+    "animaciones": {
+      "id": "04-animaciones",
+      "rulesCount": 6,
+      "description": "Animaciones performantes y accesibles"
+    },
+    "tipografia": {
+      "id": "05-tipografia",
+      "rulesCount": 10,
+      "description": "Tipografia y manejo de contenido"
+    },
+    "imagenes-media": {
+      "id": "06-imagenes-media",
+      "rulesCount": 4,
+      "description": "Imagenes y media optimizados"
+    },
+    "rendimiento": {
+      "id": "07-rendimiento",
+      "rulesCount": 6,
+      "description": "Rendimiento visual y de interaccion"
+    },
+    "layout-responsive": {
+      "id": "08-layout-responsive",
+      "rulesCount": 7,
+      "description": "Layout flexible y responsive design"
+    },
+    "modo-oscuro-temas": {
+      "id": "09-modo-oscuro-temas",
+      "rulesCount": 4,
+      "description": "Implementacion de temas y dark mode"
+    },
+    "tailwind-css": {
+      "id": "10-tailwind-css",
+      "rulesCount": 8,
+      "description": "Reglas especificas para Tailwind CSS"
+    }
+  },
+  "rulesCount": 72,
+  "antiPatternsCount": 12,
+  "templatesCount": 5,
+  "scriptsCount": 3,
+  "compatibleWith": [
+    "claude-code",
+    "cursor",
+    "github-copilot",
+    "codeium"
+  ],
+  "complementarySkills": [
+    "angular-best-practices-21",
+    "react-best-practices",
+    "vue-best-practices"
+  ],
+  "sources": [
+    {
+      "name": "Vercel Web Interface Guidelines",
+      "url": "https://github.com/vercel-labs/web-interface-guidelines"
+    },
+    {
+      "name": "VoltAgent Awesome Agent Skills",
+      "url": "https://github.com/VoltAgent/awesome-agent-skills"
+    },
+    {
+      "name": "WCAG 2.1",
+      "url": "https://www.w3.org/WAI/WCAG21/quickref/"
+    }
+  ],
+  "scripts": {
+    "audit": "node scripts/audit-ui-project.js",
+    "check": "node scripts/check-design-rules.js",
+    "report": "node scripts/generate-ui-report.js"
+  }
+}

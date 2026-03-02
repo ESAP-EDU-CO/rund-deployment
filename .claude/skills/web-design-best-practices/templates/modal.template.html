@@ -1,0 +1,406 @@
+<!--
+  TEMPLATE: Modal/Dialog Accesible
+
+  Este template demuestra las mejores practicas para modales accesibles
+  incluyendo manejo de focus, trap de focus, y cierre con Escape.
+
+  Reglas aplicadas:
+  - A003: Manejadores de teclado
+  - A007: Live regions para anuncios
+  - F001: Focus visible
+  - TO003: overscroll-behavior en modales
+  - FM018: Focus management
+-->
+
+<!-- ============================================== -->
+<!-- TRIGGER BUTTON -->
+<!-- ============================================== -->
+
+<button
+  type="button"
+  class="btn btn-primary"
+  onclick="openModal('confirmation-modal')"
+>
+  Abrir modal
+</button>
+
+<!-- ============================================== -->
+<!-- MODAL DIALOG -->
+<!-- ============================================== -->
+
+<div
+  id="confirmation-modal"
+  class="modal-overlay"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="modal-title"
+  aria-describedby="modal-description"
+  aria-hidden="true"
+>
+  <div class="modal-container">
+    <div class="modal-content" role="document">
+      <!-- Header -->
+      <div class="modal-header">
+        <h2 id="modal-title" class="modal-title">
+          Confirmar accion
+        </h2>
+        <button
+          type="button"
+          class="modal-close"
+          aria-label="Cerrar modal"
+          onclick="closeModal('confirmation-modal')"
+        >
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" class="modal-close-icon">
+            <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L10.94 12l-5.72 5.72a.75.75 0 101.06 1.06L12 13.06l5.72 5.72a.75.75 0 101.06-1.06L13.06 12l5.72-5.72a.75.75 0 00-1.06-1.06L12 10.94 6.28 5.22z"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Body -->
+      <div class="modal-body">
+        <p id="modal-description">
+          Estas a punto de realizar esta accion. Esta operacion no se puede deshacer.
+          ¿Deseas continuar?
+        </p>
+      </div>
+
+      <!-- Footer -->
+      <div class="modal-footer">
+        <button
+          type="button"
+          class="btn btn-secondary"
+          onclick="closeModal('confirmation-modal')"
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="btn btn-danger"
+          onclick="confirmAction()"
+        >
+          Confirmar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Live region para anuncios -->
+<div id="modal-announcer" aria-live="polite" class="sr-only"></div>
+
+<style>
+/* ============================================== */
+/* ESTILOS DEL MODAL */
+/* ============================================== */
+
+/* Screen reader only */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Overlay */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background-color: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.modal-overlay[aria-hidden="false"] {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Container - para scroll en contenido largo */
+.modal-container {
+  max-height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain; /* Previene scroll chain */
+}
+
+/* Content */
+.modal-content {
+  position: relative;
+  width: 100%;
+  max-width: 28rem;
+  background-color: white;
+  border-radius: 0.75rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  transform: scale(0.95);
+  transition: transform 0.2s ease;
+}
+
+.modal-overlay[aria-hidden="false"] .modal-content {
+  transform: scale(1);
+}
+
+/* Header */
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+/* Close button */
+.modal-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0.375rem;
+  color: #6b7280;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.modal-close:hover {
+  background-color: #f3f4f6;
+  color: #374151;
+}
+
+.modal-close:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px #3b82f6;
+}
+
+.modal-close-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+/* Body */
+.modal-body {
+  padding: 1.5rem;
+  color: #4b5563;
+  line-height: 1.6;
+}
+
+/* Footer */
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+/* Buttons */
+.btn {
+  padding: 0.625rem 1.25rem;
+  font-weight: 500;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-primary {
+  background: #3b82f6;
+  color: white;
+  border: none;
+}
+
+.btn-primary:hover { background: #2563eb; }
+.btn-primary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
+}
+
+.btn-secondary {
+  background: #e5e7eb;
+  color: #374151;
+  border: none;
+}
+
+.btn-secondary:hover { background: #d1d5db; }
+.btn-secondary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(107, 114, 128, 0.5);
+}
+
+.btn-danger {
+  background: #dc2626;
+  color: white;
+  border: none;
+}
+
+.btn-danger:hover { background: #b91c1c; }
+.btn-danger:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.5);
+}
+
+/* Prevenir scroll del body cuando modal esta abierto */
+body.modal-open {
+  overflow: hidden;
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  .modal-content {
+    background-color: #1f2937;
+  }
+
+  .modal-header {
+    border-bottom-color: #374151;
+  }
+
+  .modal-title {
+    color: #f9fafb;
+  }
+
+  .modal-body {
+    color: #d1d5db;
+  }
+
+  .modal-footer {
+    border-top-color: #374151;
+  }
+
+  .modal-close:hover {
+    background-color: #374151;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .modal-overlay,
+  .modal-content {
+    transition: none;
+  }
+}
+</style>
+
+<script>
+// ============================================== */
+// MANEJO DEL MODAL */
+// ============================================== */
+
+let lastFocusedElement = null;
+let focusableElements = [];
+
+function openModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (!modal) return;
+
+  // Guardar elemento que tenia focus
+  lastFocusedElement = document.activeElement;
+
+  // Mostrar modal
+  modal.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('modal-open');
+
+  // Obtener elementos focusables dentro del modal
+  focusableElements = modal.querySelectorAll(
+    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+  );
+
+  // Focus en primer elemento focusable
+  if (focusableElements.length > 0) {
+    focusableElements[0].focus();
+  }
+
+  // Agregar listeners
+  modal.addEventListener('keydown', handleModalKeydown);
+  modal.addEventListener('click', handleOverlayClick);
+
+  // Anunciar a screen readers
+  announce('Modal abierto: ' + modal.querySelector('.modal-title')?.textContent);
+}
+
+function closeModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (!modal) return;
+
+  // Ocultar modal
+  modal.setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('modal-open');
+
+  // Remover listeners
+  modal.removeEventListener('keydown', handleModalKeydown);
+  modal.removeEventListener('click', handleOverlayClick);
+
+  // Restaurar focus al elemento anterior
+  if (lastFocusedElement) {
+    lastFocusedElement.focus();
+    lastFocusedElement = null;
+  }
+
+  // Anunciar cierre
+  announce('Modal cerrado');
+}
+
+function handleModalKeydown(e) {
+  // Cerrar con Escape
+  if (e.key === 'Escape') {
+    closeModal(e.currentTarget.id);
+    return;
+  }
+
+  // Trap focus con Tab
+  if (e.key === 'Tab') {
+    const firstElement = focusableElements[0];
+    const lastElement = focusableElements[focusableElements.length - 1];
+
+    if (e.shiftKey && document.activeElement === firstElement) {
+      e.preventDefault();
+      lastElement.focus();
+    } else if (!e.shiftKey && document.activeElement === lastElement) {
+      e.preventDefault();
+      firstElement.focus();
+    }
+  }
+}
+
+function handleOverlayClick(e) {
+  // Cerrar al hacer click en el overlay (no en el contenido)
+  if (e.target.classList.contains('modal-overlay')) {
+    closeModal(e.target.id);
+  }
+}
+
+function confirmAction() {
+  // Accion de confirmacion
+  console.log('Accion confirmada');
+  closeModal('confirmation-modal');
+
+  // Aqui iria la logica de la accion
+}
+
+function announce(message) {
+  const announcer = document.getElementById('modal-announcer');
+  if (announcer) {
+    announcer.textContent = '';
+    setTimeout(() => {
+      announcer.textContent = message;
+    }, 100);
+  }
+}
+</script>

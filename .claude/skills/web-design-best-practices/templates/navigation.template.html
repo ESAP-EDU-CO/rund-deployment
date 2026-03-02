@@ -1,0 +1,522 @@
+<!--
+  TEMPLATE: Menu de Navegacion Accesible
+
+  Este template demuestra las mejores practicas para navegacion accesible
+  incluyendo skip link, landmarks ARIA, y navegacion por teclado.
+
+  Reglas aplicadas:
+  - A004: Elementos semanticos
+  - A009: Jerarquia de encabezados
+  - A010: Skip links
+  - A003: Navegacion por teclado
+  - F001: Focus visible
+  - SA001: Safe areas
+-->
+
+<!-- ============================================== -->
+<!-- SKIP LINK -->
+<!-- ============================================== -->
+
+<a href="#main-content" class="skip-link">
+  Saltar al contenido principal
+</a>
+
+<!-- ============================================== -->
+<!-- HEADER CON NAVEGACION -->
+<!-- ============================================== -->
+
+<header class="header" role="banner">
+  <div class="header-container">
+    <!-- Logo -->
+    <a href="/" class="logo" aria-label="Inicio - Mi Sitio Web">
+      <svg class="logo-icon" viewBox="0 0 32 32" aria-hidden="true">
+        <rect width="32" height="32" rx="8" fill="currentColor"/>
+      </svg>
+      <span class="logo-text">MiSitio</span>
+    </a>
+
+    <!-- Navegacion principal -->
+    <nav class="nav" aria-label="Navegacion principal">
+      <ul class="nav-list" role="list">
+        <li class="nav-item">
+          <a href="/" class="nav-link" aria-current="page">Inicio</a>
+        </li>
+        <li class="nav-item">
+          <a href="/productos" class="nav-link">Productos</a>
+        </li>
+        <li class="nav-item nav-dropdown">
+          <button
+            type="button"
+            class="nav-link nav-dropdown-trigger"
+            aria-expanded="false"
+            aria-haspopup="true"
+            aria-controls="dropdown-servicios"
+          >
+            Servicios
+            <svg class="nav-chevron" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"/>
+            </svg>
+          </button>
+          <ul id="dropdown-servicios" class="nav-dropdown-menu" role="menu">
+            <li role="none">
+              <a href="/servicios/diseno" class="nav-dropdown-item" role="menuitem">Diseno Web</a>
+            </li>
+            <li role="none">
+              <a href="/servicios/desarrollo" class="nav-dropdown-item" role="menuitem">Desarrollo</a>
+            </li>
+            <li role="none">
+              <a href="/servicios/consultoria" class="nav-dropdown-item" role="menuitem">Consultoria</a>
+            </li>
+          </ul>
+        </li>
+        <li class="nav-item">
+          <a href="/contacto" class="nav-link">Contacto</a>
+        </li>
+      </ul>
+    </nav>
+
+    <!-- Acciones -->
+    <div class="header-actions">
+      <button type="button" class="btn btn-outline" aria-label="Buscar">
+        <svg class="btn-icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+          <path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"/>
+        </svg>
+      </button>
+      <a href="/login" class="btn btn-primary">Iniciar sesion</a>
+    </div>
+
+    <!-- Menu movil toggle -->
+    <button
+      type="button"
+      class="mobile-menu-toggle"
+      aria-label="Abrir menu"
+      aria-expanded="false"
+      aria-controls="mobile-menu"
+    >
+      <svg class="hamburger-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+        <path stroke-linecap="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<!-- ============================================== -->
+<!-- CONTENIDO PRINCIPAL -->
+<!-- ============================================== -->
+
+<main id="main-content" class="main" tabindex="-1">
+  <h1>Contenido principal</h1>
+  <p>El contenido de la pagina va aqui...</p>
+</main>
+
+<style>
+/* ============================================== */
+/* SKIP LINK */
+/* ============================================== */
+
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 1rem;
+  z-index: 100;
+  padding: 0.75rem 1.5rem;
+  background: #1f2937;
+  color: white;
+  text-decoration: none;
+  border-radius: 0.5rem;
+  transition: top 0.2s ease;
+}
+
+.skip-link:focus {
+  top: 1rem;
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* ============================================== */
+/* HEADER */
+/* ============================================== */
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+  /* Safe area para notches */
+  padding-top: env(safe-area-inset-top);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+.header-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 80rem;
+  margin: 0 auto;
+  padding: 0.75rem 1.5rem;
+}
+
+/* ============================================== */
+/* LOGO */
+/* ============================================== */
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  color: #111827;
+}
+
+.logo:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 4px;
+  border-radius: 0.25rem;
+}
+
+.logo-icon {
+  width: 2rem;
+  height: 2rem;
+  color: #3b82f6;
+}
+
+.logo-text {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+/* ============================================== */
+/* NAVEGACION */
+/* ============================================== */
+
+.nav-list {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: #374151;
+  text-decoration: none;
+  border-radius: 0.5rem;
+  transition: background-color 0.2s, color 0.2s;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.nav-link:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.nav-link:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px #3b82f6;
+}
+
+.nav-link[aria-current="page"] {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.nav-chevron {
+  width: 1rem;
+  height: 1rem;
+  transition: transform 0.2s;
+}
+
+.nav-dropdown-trigger[aria-expanded="true"] .nav-chevron {
+  transform: rotate(180deg);
+}
+
+/* ============================================== */
+/* DROPDOWN */
+/* ============================================== */
+
+.nav-dropdown {
+  position: relative;
+}
+
+.nav-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 50;
+  min-width: 12rem;
+  margin: 0.5rem 0 0;
+  padding: 0.5rem;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+  list-style: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-0.5rem);
+  transition: opacity 0.2s, visibility 0.2s, transform 0.2s;
+}
+
+.nav-dropdown-trigger[aria-expanded="true"] + .nav-dropdown-menu {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.nav-dropdown-item {
+  display: block;
+  padding: 0.625rem 1rem;
+  color: #374151;
+  text-decoration: none;
+  border-radius: 0.5rem;
+  transition: background-color 0.2s;
+}
+
+.nav-dropdown-item:hover {
+  background: #f3f4f6;
+}
+
+.nav-dropdown-item:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px #3b82f6;
+}
+
+/* ============================================== */
+/* ACCIONES */
+/* ============================================== */
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none;
+}
+
+.btn-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.btn-outline {
+  background: transparent;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+
+.btn-outline:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.btn-outline:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px #3b82f6;
+}
+
+.btn-primary {
+  background: #3b82f6;
+  color: white;
+  border: none;
+}
+
+.btn-primary:hover {
+  background: #2563eb;
+}
+
+.btn-primary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
+}
+
+/* ============================================== */
+/* MENU MOVIL */
+/* ============================================== */
+
+.mobile-menu-toggle {
+  display: none;
+  padding: 0.5rem;
+  background: transparent;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+}
+
+.mobile-menu-toggle:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px #3b82f6;
+}
+
+.hamburger-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .nav,
+  .header-actions {
+    display: none;
+  }
+
+  .mobile-menu-toggle {
+    display: block;
+  }
+}
+
+/* ============================================== */
+/* MAIN */
+/* ============================================== */
+
+.main {
+  max-width: 80rem;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+.main:focus {
+  outline: none;
+}
+
+/* ============================================== */
+/* DARK MODE */
+/* ============================================== */
+
+@media (prefers-color-scheme: dark) {
+  .header {
+    background: #111827;
+    border-bottom-color: #374151;
+  }
+
+  .logo {
+    color: #f9fafb;
+  }
+
+  .nav-link {
+    color: #d1d5db;
+  }
+
+  .nav-link:hover {
+    background: #1f2937;
+    color: #f9fafb;
+  }
+
+  .nav-link[aria-current="page"] {
+    background: #1e3a5f;
+    color: #60a5fa;
+  }
+
+  .nav-dropdown-menu {
+    background: #1f2937;
+    border-color: #374151;
+  }
+
+  .nav-dropdown-item {
+    color: #d1d5db;
+  }
+
+  .nav-dropdown-item:hover {
+    background: #374151;
+  }
+}
+
+/* ============================================== */
+/* REDUCED MOTION */
+/* ============================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .skip-link,
+  .nav-link,
+  .nav-dropdown-menu,
+  .nav-chevron,
+  .btn {
+    transition: none;
+  }
+}
+</style>
+
+<script>
+// ============================================== */
+// DROPDOWN NAVIGATION */
+// ============================================== */
+
+document.addEventListener('DOMContentLoaded', function() {
+  const dropdowns = document.querySelectorAll('.nav-dropdown');
+
+  dropdowns.forEach(dropdown => {
+    const trigger = dropdown.querySelector('.nav-dropdown-trigger');
+    const menu = dropdown.querySelector('.nav-dropdown-menu');
+
+    // Toggle on click
+    trigger.addEventListener('click', function() {
+      const isExpanded = this.getAttribute('aria-expanded') === 'true';
+      this.setAttribute('aria-expanded', !isExpanded);
+    });
+
+    // Close on click outside
+    document.addEventListener('click', function(e) {
+      if (!dropdown.contains(e.target)) {
+        trigger.setAttribute('aria-expanded', 'false');
+      }
+    });
+
+    // Keyboard navigation
+    trigger.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        this.setAttribute('aria-expanded', 'false');
+        this.focus();
+      }
+
+      if (e.key === 'ArrowDown' && this.getAttribute('aria-expanded') === 'true') {
+        e.preventDefault();
+        const firstItem = menu.querySelector('.nav-dropdown-item');
+        if (firstItem) firstItem.focus();
+      }
+    });
+
+    // Arrow navigation in menu
+    menu.addEventListener('keydown', function(e) {
+      const items = menu.querySelectorAll('.nav-dropdown-item');
+      const currentIndex = Array.from(items).indexOf(document.activeElement);
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        const nextIndex = (currentIndex + 1) % items.length;
+        items[nextIndex].focus();
+      }
+
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        const prevIndex = currentIndex === 0 ? items.length - 1 : currentIndex - 1;
+        items[prevIndex].focus();
+      }
+
+      if (e.key === 'Escape') {
+        trigger.setAttribute('aria-expanded', 'false');
+        trigger.focus();
+      }
+    });
+  });
+});
+</script>
