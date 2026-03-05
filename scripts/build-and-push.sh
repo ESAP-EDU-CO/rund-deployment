@@ -8,7 +8,7 @@ set -e
 # Configuración
 DOCKER_USERNAME="ocastelblanco"
 TAG=${1:-latest}
-COMPONENTS=${2:-"api,mgp,ocr,ai"}
+COMPONENTS=${2:-"api,mgp,ocr,ai,auth"}
 
 echo "🏗️  Construyendo y subiendo imágenes de RUND"
 echo "👤 Usuario Docker Hub: $DOCKER_USERNAME"
@@ -124,7 +124,7 @@ build_and_push() {
 IFS=',' read -ra COMPONENT_ARRAY <<< "$COMPONENTS"
 
 # Verificar componentes válidos
-VALID_COMPONENTS=("api" "mgp" "ocr" "ai")
+VALID_COMPONENTS=("api" "mgp" "ocr" "ai" "auth")
 for component in "${COMPONENT_ARRAY[@]}"; do
     if [[ ! " ${VALID_COMPONENTS[@]} " =~ " $component " ]]; then
         echo "❌ Error: Componente '$component' no válido"
