@@ -70,6 +70,8 @@ services:
       # URLs para producción
       - API_BASE_URL=http://172.16.234.52:3000
       - INTERNAL_API_URL=http://rund-api:3000
+      # Habilitar botón de login de desarrollo (requiere DEV_FAKE_LOGIN=true en rund-auth)
+      - DEV_FAKE_LOGIN=true
     networks:
       - rund-network
     depends_on:
