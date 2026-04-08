@@ -107,12 +107,13 @@ services:
       - EMBEDDINGS_DEVICE=cpu
       - VECTOR_DB_PATH=/cache/chromadb
       - VECTOR_DB_NAME=rund_documents
-      - NUEXTRACT_MODEL=nuextract
-      - GEMMA_MODEL=gemma2:2b
+      - NUEXTRACT_MODEL=gemma4:e4b
+      - GEMMA_MODEL=gemma4:e4b
+      - USE_MULTIMODAL=true
       # Configuración general
       - LOG_LEVEL=INFO
-      - MAX_WORKERS=4
-      - OLLAMA_TIMEOUT=120
+      - MAX_WORKERS=3
+      - OLLAMA_TIMEOUT=600
       - OLLAMA_RETRY_ATTEMPTS=3
     networks:
       - rund-network
@@ -138,7 +139,7 @@ services:
   rund-ollama:
     image: ollama/ollama:latest
     container_name: rund-ollama
-    platform: linux/amd64
+    platform: linux/amd64  # Servidor UAT es linux/amd64
     restart: unless-stopped
     ports:
       - "11434:11434"
@@ -150,23 +151,25 @@ services:
       - TZ=America/Bogota
       - OLLAMA_HOST=0.0.0.0:11434
       - OLLAMA_ORIGINS=*
-      - OLLAMA_KEEP_ALIVE=5m
+      - OLLAMA_KEEP_ALIVE=30m
+      - OLLAMA_MAX_LOADED_MODELS=1
     healthcheck:
       test: ["CMD", "curl", "-f", "http://0.0.0.0:11434/api/tags"]
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 120s
-    # Límites de recursos para producción
+    # gemma4:e4b requiere ~10.3GB RAM en disco + carga en memoria
     deploy:
       resources:
         limits:
-          memory: 6G
-          cpus: "2.0"
+          memory: 12G
+          cpus: "4.0"
         reservations:
-          memory: 3G
-          cpus: "1.0"
-    # Si hay GPU NVIDIA disponible:
+          memory: 10G
+          cpus: "2.0"
+    # Si hay GPU NVIDIA disponible (reemplaza deploy.resources completo):
+    # Si hay GPU NVIDIA disponible (reemplaza deploy.resources completo):
     # deploy:
     #   resources:
     #     reservations:
