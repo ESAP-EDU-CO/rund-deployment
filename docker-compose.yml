@@ -130,12 +130,13 @@ services:
       - EMBEDDINGS_DEVICE=cpu
       - VECTOR_DB_PATH=/cache/chromadb
       - VECTOR_DB_NAME=rund_documents
-      - NUEXTRACT_MODEL=nuextract
-      - GEMMA_MODEL=gemma2:2b
+      - NUEXTRACT_MODEL=gemma4:e4b
+      - GEMMA_MODEL=gemma4:e4b
+      - USE_MULTIMODAL=true
       # Configuración general
       - LOG_LEVEL=INFO
-      - MAX_WORKERS=4
-      - OLLAMA_TIMEOUT=120
+      - MAX_WORKERS=3
+      - OLLAMA_TIMEOUT=600
       - OLLAMA_RETRY_ATTEMPTS=3
     networks:
       - rund-network
@@ -161,8 +162,7 @@ services:
   rund-ollama:
     image: ollama/ollama:latest
     container_name: rund-ollama
-    # Forzar el uso de la plataforma amd64, ya que no hay imagen arm64 oficial para Ollama.
-    platform: linux/amd64
+    # ARM nativo para Apple Silicon (Metal GPU). Remover si se despliega en servidor linux/amd64.
     restart: unless-stopped
     ports:
       - "11434:11434"
@@ -174,7 +174,8 @@ services:
       - TZ=America/Bogota
       - OLLAMA_HOST=0.0.0.0:11434
       - OLLAMA_ORIGINS=*
-      - OLLAMA_KEEP_ALIVE=5m
+      - OLLAMA_KEEP_ALIVE=30m
+      - OLLAMA_MAX_LOADED_MODELS=1
     healthcheck:
       test: ["CMD", "curl", "-f", "http://0.0.0.0:11434/api/tags"]
       interval: 30s
