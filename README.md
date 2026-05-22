@@ -64,20 +64,28 @@ RUND es una aplicación basada en **microservicios Docker** que separa responsab
 - **Puerto**: 3000
 - **Dependencias**: LibreOffice (conversión de documentos)
 - **Recursos**: 512MB RAM
+- **Características especiales**:
+  - Cron job nocturno (supervisord) para actualizar categorías RANGO_ETARIO
+  - Integración con rund-auth para validación de JWT
+  - Dashboard de extracción de datos en producción
 - **Endpoints principales**:
   - `/api/documentos` - CRUD de documentos
   - `/api/profesores` - Gestión de profesores
+  - `/api/v2/extraccion/{cedula}` - Obtener documentos extraídos (con paginación)
+  - `/api/v2/extraccion/stats` - Estadísticas de extracción
   - `/api/ocr/extract` - Proxy a rund-ocr
   - `/api/ai/extract` - Proxy a rund-ai
 
 ### 3. **rund-mgp** - Frontend
-- **Tecnología**: Angular 20 + TypeScript + SSR
-- **Función**: Interface de usuario
+- **Tecnología**: Angular 21.2 + PrimeNG 21.1 + TypeScript + SSR
+- **Función**: Interface de usuario con dashboard de extracción
 - **Puerto**: 4000
 - **Características**:
   - Server-Side Rendering (SSR)
-  - Componentes reactivos
+  - Componentes reactivos (PrimeNG)
   - Gestión de estado centralizada
+  - Dashboard de extracción de datos en producción
+  - Integración con rund-auth para autenticación
 - **Recursos**: 512MB RAM
 
 ### 4. **rund-ocr** - Servicio de OCR
@@ -100,19 +108,22 @@ POST /extract-text    # Extracción de texto (multipart/form-data)
 ```
 
 ### 5. **rund-ai** - Servicio de Inteligencia Artificial
-- **Tecnología**: Python 3.9+ + Flask + Sentence Transformers + ChromaDB
-- **Función**: Extracción estructurada de datos, búsqueda semántica, validación, gestión de cola asíncrona
+- **Tecnología**: Python 3.9+ + Flask 3.0 + Sentence Transformers + ChromaDB
+- **Función**: Extracción estructurada, búsqueda semántica, validación, gestión de cola asíncrona
 - **Puerto**: 8001
+- **Versión**: 2.0 (con procesamiento asíncrono)
 - **Modelos**:
   - `paraphrase-multilingual-MiniLM-L12-v2` (embeddings, ~120MB)
-  - Validadores de datos implementados
+  - NuExtract (vía rund-ollama, ~3.8GB)
+  - Gemma2:2b (vía rund-ollama, ~2GB)
 - **Volúmenes**:
   - `ai-models` (modelos de embeddings)
   - `ai-cache` (ChromaDB para búsqueda semántica)
 - **Recursos**: 2GB RAM
-- **Arquitectura**: Procesamiento asíncrono con workers y cola FIFO
+- **Arquitectura**: Procesamiento asíncrono con 3 workers y cola FIFO
+- **Estado actual**: 77 documentos procesados, 61% tasa de éxito, 3 profesores
 
-**Endpoints**:
+**Endpoints principales**:
 ```bash
 # Core
 GET  /health                      # Health check
@@ -128,14 +139,16 @@ POST /queue/add-batch             # Encolar documentos para extracción
 GET  /queue/stats                 # Estadísticas de la cola
 GET  /queue/job/<document_id>     # Estado de un job específico
 
-# Índice de extracción
+# Índice de extracción (todos los estados: pendiente, procesando, completado, error)
 GET  /extraction/statistics       # Estadísticas generales del índice
-GET  /extraction/professor/<ced>  # Documentos de un profesor
+GET  /extraction/professor/<ced>  # Documentos de un profesor (todas las estatuas)
 
 # Búsqueda semántica
 POST /search                      # Búsqueda semántica
 GET  /stats                       # Estadísticas y tendencias
 ```
+
+**Nota**: Los frontends deben consumir `/api/v2/extraccion/*` desde rund-api en lugar de llamar directamente a rund-ai. La API de rund-api proporciona wrappers más limpios con paginación y validación adicional.
 
 **Características avanzadas**:
 - ✅ **Procesamiento asíncrono**: Cola con workers para documentos largos
@@ -164,45 +177,49 @@ POST /api/generate    # Generar con LLM
 POST /api/chat        # Chat con LLM
 ```
 
-### 7. **rund-auth** - Autenticación y Autorización ⚠️ **EN DESARROLLO**
+### 7. **rund-auth** - Autenticación y Autorización
 - **Tecnología**: Node.js 20+ + TypeScript + Express
-- **Función**: Servicio de autenticación con Microsoft Entra ID (M365) de la ESAP
-- **Puerto**: 8080
-- **Estado**: Fase inicial de desarrollo
+- **Función**: Servicio de autenticación centralizado con LDAP, OAuth 2.0 (Azure AD) y JWT RS256
+- **Puerto**: 8081
+- **Estado**: ✅ **COMPLETADO Y EN PRODUCCIÓN**
 - **Recursos**: 256MB RAM
 - **Arquitectura**:
-  - **Módulo de acoplamiento débil**: Sin base de datos, solo validación de tokens
-  - **OpenID Connect (OIDC)**: Integración con Azure Entra ID
-  - **JWT pass-through**: Valida y reenvía tokens de Entra ID a servicios internos
+  - **LDAP**: Autenticación contra Active Directory de ESAP
+  - **OAuth 2.0 / OIDC**: Integración con Azure AD
+  - **JWT RS256**: Tokens firmados con clave privada/pública
+  - **Redis**: Sesiones con TTL de 8 horas
+  - **PostgreSQL**: Persistencia de usuarios (opcional)
 
-**Características implementadas**:
-- ✅ Flujo OAuth2/OIDC con Microsoft Entra ID
-- ✅ Validación de tokens de Entra ID
-- ✅ Modo DEV con login falso para desarrollo local
-- ⏳ Integración con rund-api y rund-mgp (pendiente)
-- ⏳ Middleware de autorización (pendiente)
+**Métodos de autenticación implementados**:
+- ✅ LDAP (Active Directory de ESAP)
+- ✅ OAuth 2.0 / Entra ID (Azure AD)
+- ✅ JWT RS256 (tokens internos firmados)
+- ✅ Modo DEV con fake login para desarrollo
 
-**Endpoints**:
+**Endpoints principales**:
 ```bash
-GET  /oauth/login      # Iniciar login con Entra ID
-GET  /oauth/callback   # Callback de OAuth2
-GET  /validate         # Validar token (middleware)
-GET  /dev/login        # Login falso (solo DEV)
+POST /ldap/login                      # Autenticación LDAP
+GET  /oauth/login                     # Iniciar OAuth2 flow
+GET  /oauth/callback                  # Callback de OAuth2
+GET  /.well-known/jwks.json          # JWKS público para validación
+GET  /dev/login                       # Login falso (solo DEV)
 ```
 
 **Flujo de autenticación**:
 ```
-Usuario → rund-mgp → rund-auth (/oauth/login)
-                          ↓
-                    Microsoft Entra ID (M365 ESAP)
-                          ↓
-              rund-auth (/oauth/callback)
-                          ↓
-              Valida token y retorna a rund-mgp
-                          ↓
-              rund-mgp incluye token en requests a rund-api
-                          ↓
-              rund-api valida con rund-auth (/validate)
+Usuario → rund-mgp
+    ↓
+POST /ldap/login {username, password} (o /oauth/login)
+    ↓
+rund-auth → Valida contra LDAP/Azure AD
+    ↓
+Genera JWT firmado con RS256 (TTL 900s)
+    ↓
+Guarda sesión en Redis (8 horas)
+    ↓
+Frontend → Usa JWT en requests a rund-api
+    ↓
+rund-api → Valida JWT con JWKS público de rund-auth
 ```
 
 ---
@@ -935,37 +952,45 @@ Para reportar problemas o solicitar funcionalidades:
 
 ## 📋 Roadmap
 
-### ✅ Completado (v1.2 - Noviembre 2024)
+### ✅ Completado (v2.0 - Mayo 2026)
 - Arquitectura de microservicios con 7 contenedores
 - OCR con PaddleOCR (español/inglés)
-- Extracción estructurada con NuExtract
+- Extracción estructurada con NuExtract (6 tipos de documentos)
 - Validación y limpieza de datos post-extracción
 - Búsqueda semántica con ChromaDB
-- Servicio de autenticación con Entra ID (fase inicial)
-- **✨ Extracción asíncrona con cola de trabajos**
+- **✅ rund-auth**: Servicio de autenticación centralizado COMPLETADO
+  - LDAP contra Active Directory de ESAP
+  - OAuth 2.0 / Azure AD (Entra ID)
+  - JWT RS256 con validación en rund-api
+  - Redis para sesiones con TTL
+- **✨ Extracción asíncrona con cola FIFO (3 workers paralelos)**
 - **✨ Índice centralizado de documentos extraídos**
 - **✨ Arquitectura de microservicios estricta (rund-ai → rund-api → rund-core)**
 - **✨ Preservación de categorías demográficas y genéricas**
-- **✨ Estadísticas completas de extracción**
+- **✨ Estadísticas completas de extracción (77+ docs, 61% éxito)**
 - **✨ Endpoints de webhook para callbacks**
+- **✨ Dashboard de extracción en rund-mgp (producción)**
+- **✨ Cron job nocturno para actualizar RANGO_ETARIO**
+- **✨ Mapeo de labels.json (cedula → "Documento de identidad")**
 
-### 🚧 En Progreso (v1.3)
-- **rund-auth**: Integración completa con rund-api y rund-mgp
-- **rund-auth**: Middleware de validación de tokens
+### 🚧 En Progreso
 - Pre-procesamiento de imágenes para OCR (CLAHE, binarización)
 - Procesamiento por zonas (ROI) para cédulas
 - Detección automática de formato de cédula
-- Mejora de precisión de extracción (objetivo: 60-70%)
+- Optimización de precisión de extracción (actual: 61%)
+- Testing completo de búsqueda semántica con ChromaDB
+- Testing completo de validación de consistencia
 
-### 📅 Planificado (v1.2+)
-- **rund-auth**: Caché de validaciones de tokens
-- **rund-auth**: Logs de auditoría de accesos
-- Fine-tuning de modelos de IA
-- Dashboard de estadísticas y métricas
-- Procesamiento batch automatizado nocturno
-- API de webhooks para notificaciones
+### 📅 Planificado
+- Fine-tuning de modelos si precisión < 85%
+- OCR optimizado con templates para cédulas colombianas
+- Dashboard de estadísticas y métricas (tiempo real)
+- Procesamiento batch automatizado (optimización)
+- Sistema de prioridades en cola
+- Detección automática de duplicados
+- API de análisis y tendencias
+- Autenticación por API key
 - Sistema de workflows para aprobaciones
-- Interfaz de administración mejorada
 
 ---
 
@@ -982,6 +1007,7 @@ Para reportar problemas o solicitar funcionalidades:
 
 ---
 
-**Última actualización**: Noviembre 2024
-**Versión del documento**: 2.0
-**Contacto**: [Definir contacto]
+**Última actualización**: Mayo 2026
+**Versión del documento**: 2.1
+**Versión del sistema**: 2.0 (RUND-AI v2.0, rund-auth v1.0)
+**Contacto**: desarrollo@esap.edu.co
