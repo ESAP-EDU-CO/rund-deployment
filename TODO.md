@@ -13,33 +13,7 @@
 
 ## Tareas Activas
 
-### TAREA 1 · [OPS] Reset de jobs bloqueados en estado "procesando"
-
-**Etiqueta:** `[OPS]`
-**Origen:** Observación directa — 20 mayo 2026 · PRD §6 Roadmap #18
-**Prioridad:** MEDIA — 15 documentos bloqueados degradan métricas reales (61% → ~80% tasa de éxito tras reset)
-
-**Contexto:**
-El dashboard de Extracción de datos muestra 15 documentos en estado "procesando" con la cola vacía. Son jobs de sesiones anteriores de rund-ai que quedaron sin completar. Necesita:
-1. Un endpoint en rund-ai: `POST /reset-stuck-jobs` que marque todos los "procesando" como "pendiente"
-2. Un proxy en rund-api: `POST /api/v2/ai/reset-stuck-jobs`
-3. Un botón en la sección Extracción de datos, visible solo cuando `procesando > 0`
-
-**Archivos a modificar:**
-- `rund-ai/` — nuevo endpoint Flask (Python)
-- `rund-api/app/src/Controllers/V2/AIController.php` — método `resetStuckJobs()`
-- `rund-api/app/routes_v2.php` — nueva ruta POST
-- `rund-mgp/src/app/vistas/extraccion/extraccion.ts/html` — botón condicional
-
-**Definición de done:**
-- [ ] `POST http://localhost:8001/reset-stuck-jobs` resetea todos los "procesando" a "pendiente"
-- [ ] El endpoint proxiado en rund-api responde 200
-- [ ] El botón aparece en el dashboard solo cuando `procesando > 0` (actualmente: 15)
-- [ ] Tras el reset, el dashboard muestra los jobs como "pendiente" al hacer clic en Actualizar
-
----
-
-### TAREA 2 · [FEATURE] Scheduler asíncrono de extracción en horas muertas
+### TAREA 1 · [FEATURE] Scheduler asíncrono de extracción en horas muertas
 
 **Etiqueta:** `[FEATURE]`
 **Origen:** PRD §4 Objetivo 13 + §6 Roadmap #15 · Backlog — 20 mayo 2026
@@ -66,6 +40,31 @@ El sistema de extracción (rund-ai) procesa documentos de forma asíncrona cuand
 
 ---
 
+### TAREA 2 · [FEATURE] Clasificación automática al subir un documento
+
+**Etiqueta:** `[FEATURE]`
+**Origen:** PRD §4 Objetivo 9 · Roadmap #3 — 28 mayo 2026
+**Prioridad:** ALTA — el endpoint `/classify` ya existe en rund-ai pero no está conectado al flujo de carga; conectarlo da clasificación correcta ≥ 80 % de los casos sin nuevo desarrollo en el backend AI
+
+**Contexto:**
+Cuando el gestor sube un documento en la sección "Editar documentación", rund-api lo guarda en OpenKM pero no invoca la clasificación automática. El endpoint `POST /api/v2/ai/extraer` (y el clasificador en rund-ai) ya existen. Se requiere:
+1. En rund-api, al finalizar la subida exitosa de un archivo, enviar el documento a `POST http://rund-ai:8001/classify` de forma asíncrona (fire-and-forget)
+2. Si la confianza es ≥ 0.8, actualizar la categoría del documento en OpenKM automáticamente
+3. Mostrar en la UI un indicador ("clasificado automáticamente") en la ficha del documento cuando la categoría fue asignada por IA
+
+**Archivos a modificar:**
+- `rund-api/app/src/Handlers/FileHandlers.php` — llamada asíncrona a rund-ai tras subida exitosa
+- `rund-api/app/src/Controllers/V2/AIController.php` — método `clasificar()` si no existe
+- `rund-mgp/src/app/compartidos/componentes/ficha-docente/ficha-docente.ts/html` — badge "IA" en documentos clasificados automáticamente
+
+**Definición de done:**
+- [ ] Al subir un PDF, rund-api invoca `POST /classify` en rund-ai (sin bloquear la respuesta)
+- [ ] Si confianza ≥ 0.8, la categoría del documento en OpenKM se actualiza automáticamente
+- [ ] La ficha del docente muestra un badge o indicador en documentos con categoría asignada por IA
+- [ ] La subida sigue funcionando aunque rund-ai no responda (degradación elegante)
+
+---
+
 ## Historial de Tareas Completadas
 
 | Fecha | Tarea | Estado | Notas |
@@ -75,6 +74,7 @@ El sistema de extracción (rund-ai) procesa documentos de forma asíncrona cuand
 | 20 may 2026 | [HOTFIX] Docentes faltantes en desplegable Editar documentación | ✅ Completada | rund-api#2 + rund-mgp#6. Causa: search/find sin categorías + nombre de cédula no estándar |
 | 20 may 2026 | [FEATURE] Sección "Extracción de datos" con dashboard | ✅ Completada | rund-api#3 + rund-mgp#7 |
 | 21 may 2026 | [FEATURE] API /extraccion/* + Vista previa con accordion + datos extraídos | ✅ Completada | rund-api#4 + rund-mgp#8. Endpoints paginados, JSON side-car, AccordionModule |
+| 28 may 2026 | [OPS] Reset de jobs bloqueados en estado "procesando" | ✅ Completada | rund-ai: `reset_stuck_jobs()` + `POST /reset-stuck-jobs`. rund-api: `resetStuckJobs()` + ruta. rund-mgp: botón condicional en dashboard de extracción |
 
 ---
 
@@ -87,3 +87,4 @@ El sistema de extracción (rund-ai) procesa documentos de forma asíncrona cuand
 | 19 may 2026 | Hotfix crítico + carga masiva sin visibilidad. | Hotfix dropdown + extracción | Hotfix → P0; visibilidad → P1. |
 | 20 may 2026 | Obj 12 completado. 15 jobs bloqueados. API JSONs pendiente. | API JSONs + reset bloqueados | Operabilidad primero. |
 | 21 may 2026 | Obj 14 completado (API JSONs + accordion + datos extraídos). 15 docs en "procesando" con cola vacía. Obj 13 (scheduler) sin iniciar. | Reset jobs bloqueados + scheduler extracción | Reset desbloquea métricas reales; scheduler habilita carga inicial de ~12000 docs. |
+| 28 may 2026 | Reset jobs bloqueados completado. Scheduler sin iniciar (TAREA 1). Clasificador existente sin conectar al flujo de subida (Obj 9). | Scheduler extracción + Clasificación automática al subir | Scheduler es P1 por volumen (~12000 docs pendientes); clasificación es P2 por impacto operativo inmediato y bajo costo (endpoint ya existe). |
