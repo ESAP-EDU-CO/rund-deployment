@@ -14,34 +14,7 @@
 
 ## Tareas Activas
 
-### TAREA 1 · [FEATURE] Scheduler asíncrono de extracción en horas muertas
-
-**Etiqueta:** `[FEATURE]`
-**Origen:** PRD §4 Objetivo 13 + §6 Roadmap #15 · Backlog — 20 mayo 2026
-**Prioridad:** ALTA — 77 documentos en el sistema, muchos pendientes o con error; la carga inicial de ~12 000 requiere procesamiento continuo
-
-**Contexto:**
-El sistema de extracción (rund-ai) procesa documentos de forma asíncrona cuando se suben, pero no tiene mecanismo para procesar el backlog pendiente fuera del horario de carga. Se requiere un scheduler configurable que:
-- Se ejecute en rangos horarios definidos (ej. 22:00–06:00)
-- Tome todos los documentos en estado "pendiente" o "error" del índice
-- Los encole en rund-ai para reprocesamiento
-- Se pueda iniciar/pausar/configurar desde la sección Extracción de datos
-
-**Archivos a modificar/crear:**
-- `rund-api/app/cli/scheduler_extraccion.php` — script CLI nuevo
-- `rund-api/cron/rund-crontab` — agregar tarea del scheduler
-- `rund-api/app/src/Controllers/V2/AIController.php` — endpoints de control del scheduler
-- `rund-mgp/src/app/vistas/extraccion/` — controles de inicio/pausa/configuración en UI
-
-**Definición de done:**
-- [ ] El scheduler encola documentos pendientes/error en rund-ai durante el rango horario
-- [ ] Los endpoints `POST /api/v2/ai/scheduler/start`, `/pause`, `/status` responden correctamente
-- [ ] Los controles en la UI cambian el estado visible del scheduler
-- [ ] El dashboard muestra el estado "activo / pausado" del scheduler
-
----
-
-### TAREA 2 · [FEATURE] Clasificación automática al subir un documento
+### TAREA 1 · [FEATURE] Clasificación automática al subir un documento
 
 **Etiqueta:** `[FEATURE]`
 **Origen:** PRD §4 Objetivo 9 · Roadmap #3 — 28 mayo 2026
@@ -63,6 +36,31 @@ Cuando el gestor sube un documento en la sección "Editar documentación", rund-
 - [ ] Si confianza ≥ 0.8, la categoría del documento en OpenKM se actualiza automáticamente
 - [ ] La ficha del docente muestra un badge o indicador en documentos con categoría asignada por IA
 - [ ] La subida sigue funcionando aunque rund-ai no responda (degradación elegante)
+
+---
+
+### TAREA 2 · [FEATURE] Auto-refresh del dashboard de extracción con cola activa
+
+**Etiqueta:** `[FEATURE]`
+**Origen:** PRD §4 Objetivo 13 · Motor JIT — 28 mayo 2026
+**Prioridad:** ALTA — el scheduler nocturno ya está operativo pero los operadores no pueden monitorear el progreso sin recargar manualmente; el polling automático cierra ese loop
+
+**Contexto:**
+El dashboard de extracción muestra estadísticas en tiempo real, pero solo se actualiza al hacer clic en "Actualizar". Durante los runs nocturnos del scheduler o cuando hay cola activa (`colaActiva > 0`), el operador necesita ver el avance sin intervención. Se requiere:
+1. Implementar polling automático en el componente `Extraccion`: cuando `colaActiva > 0`, llamar a `cargar()` cada 30 segundos automáticamente
+2. Detener el polling cuando la cola llega a 0 (o el componente se destruye)
+3. Mostrar un indicador visual sutil ("actualizando automáticamente…") mientras el polling está activo
+
+**Archivos a modificar:**
+- `rund-mgp/src/app/vistas/extraccion/extraccion.ts` — `interval` + `takeUntil` para polling reactivo
+- `rund-mgp/src/app/vistas/extraccion/extraccion.html` — chip/badge "auto-refresh activo"
+- `rund-mgp/src/app/vistas/extraccion/extraccion.scss` — estilo del indicador (opcional)
+
+**Definición de done:**
+- [ ] Con `colaActiva > 0`, el dashboard se refresca automáticamente cada 30 s sin intervención
+- [ ] El polling se detiene al llegar `colaActiva = 0` o al destruir el componente (sin memory leaks)
+- [ ] El indicador "auto-refresh" aparece mientras el polling está activo y desaparece cuando para
+- [ ] Sin cola activa, el componente funciona exactamente igual que antes (sin regresión)
 
 ---
 
@@ -130,6 +128,7 @@ El objetivo del documento es que un LLM (Claude Code, Codex, Gemini Code, etc.) 
 | 21 may 2026 | [FEATURE] API /extraccion/* + Vista previa con accordion + datos extraídos | ✅ Completada | rund-api#4 + rund-mgp#8. Endpoints paginados, JSON side-car, AccordionModule |
 | 28 may 2026 | [OPS] Reset de jobs bloqueados en estado "procesando" | ✅ Completada | rund-ai: `reset_stuck_jobs()` + `POST /reset-stuck-jobs`. rund-api: `resetStuckJobs()` + ruta. rund-mgp: botón condicional en dashboard de extracción |
 | 28 may 2026 | [OPS] Re-encolar documentos en "error" → "pendiente" | ✅ Completada | rund-ai: `retry_error_jobs()` + `POST /retry-error-jobs`. rund-api: `retryErrorJobs()` + ruta. rund-mgp: botón "Re-encolar errores (N)" condicional. PRs: rund-ai#2, rund-api#6, rund-mgp#10 |
+| 28 may 2026 | [FEATURE] Scheduler asíncrono de extracción en horas muertas | ✅ Completada | rund-ai: `POST /queue/enqueue-pending` + `get_pending_documents()`. rund-api: CLI `scheduler_extraccion.php` + crontab `*/30 22-6h` + 4 rutas REST (`/scheduler/status|start|pause|config`) + `scheduler_state.json`. rund-mgp: panel con tag Activo/Pausado, toggle, configuración de rango horario. PRs: rund-ai#3, rund-api#7, rund-mgp#11 |
 
 ---
 
@@ -144,3 +143,4 @@ El objetivo del documento es que un LLM (Claude Code, Codex, Gemini Code, etc.) 
 | 21 may 2026 | Obj 14 completado (API JSONs + accordion + datos extraídos). 15 docs en "procesando" con cola vacía. Obj 13 (scheduler) sin iniciar. | Reset jobs bloqueados + scheduler extracción | Reset desbloquea métricas reales; scheduler habilita carga inicial de ~12000 docs. |
 | 28 may 2026 | Reset jobs bloqueados completado. Scheduler sin iniciar (TAREA 1). Clasificador existente sin conectar al flujo de subida (Obj 9). | Scheduler extracción + Clasificación automática al subir | Scheduler es P1 por volumen (~12000 docs pendientes); clasificación es P2 por impacto operativo inmediato y bajo costo (endpoint ya existe). |
 | 28 may 2026 | Retry-error-jobs completado. Instrucción directa: crear documentación para migración/integración OTIC. | TAREA 3 añadida como excepción estratégica | Documentación habilita migración semiautomatizada por LLM; no compite con TAREA 1 y 2 operacionales. |
+| 28 may 2026 | Scheduler completado (rund-ai#3, rund-api#7, rund-mgp#11). Cola nocturna operativa. Clasificación automática sigue sin conectar (Obj 9). Dashboard sin auto-refresh durante runs activos. | Clasificación automática al subir (TAREA 1) + Auto-refresh dashboard cola activa (TAREA 2) | Clasificación cierra el loop upload→AI; auto-refresh permite monitoreo del scheduler sin intervención manual. |

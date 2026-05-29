@@ -16,7 +16,7 @@
 | **URL UAT/producción** | http://172.16.234.52:4000 · http://172.16.234.52:3000 |
 | **Rama principal** | `main` |
 | **Rama activa de trabajo** | `main` (feature branches según git flow) |
-| **Último commit relevante** | `ops/reset-retry-queue-jobs` fusionado — reset + retry cola de extracción (28 may 2026) |
+| **Último commit relevante** | `feature/scheduler-extraccion` en revisión — scheduler nocturno + panel de control (28 may 2026) |
 | **Docker Hub** | `ocastelblanco/rund-*:latest` |
 | **Desarrollador** | Oliver Castelblanco Martínez — Bogotá, Colombia (UTC-5) |
 
@@ -53,6 +53,8 @@
 - [x] `POST /reset-stuck-jobs` — resetea documentos bloqueados "procesando" → "pendiente" (rund-ai#2 + rund-api#6 + rund-mgp#10)
 - [x] `POST /retry-error-jobs` — re-encola documentos "error" → "pendiente" para scheduler (rund-ai#2 + rund-api#6 + rund-mgp#10)
 - [x] Botones condicionales en dashboard: "Resetear bloqueados" y "Re-encolar errores"
+- [x] Scheduler asíncrono nocturno: CLI PHP + crontab `*/30 22-6h` + 4 endpoints REST de control (rund-ai#3, rund-api#7, rund-mgp#11)
+- [x] Panel de control del scheduler en UI: tag Activo/Pausado, toggle, configuración de rango horario, último run
 
 ### 🚧 En progreso
 
@@ -388,16 +390,26 @@ def extract():
 - ✅ Sección "Extracción de datos" con dashboard de estadísticas (rund-api#3 + rund-mgp#7)
 - ✅ API `/extraccion/*` paginada + vista previa accordion (rund-api#4 + rund-mgp#8)
 
-**28 mayo 2026**
+**28 mayo 2026 (sesión 1)**
 - ✅ `POST /reset-stuck-jobs` — resetea "procesando" → "pendiente" en índice de extracción
 - ✅ `POST /retry-error-jobs` — re-encola "error" → "pendiente" para scheduler asíncrono
 - ✅ Botones condicionales en dashboard de Extracción de datos
 - ✅ Fix crítico: VM Docker Desktop al 100% de disco (liberados ~23 GB de caché)
-- ✅ PRs fusionados en 4 repos: rund-ai#2, rund-api#6, rund-mgp#10, rund-deployment#2
-- ✅ MEMORY.md y TODO.md actualizados con nueva TAREA 3 (documentación para migración OTIC)
+- ✅ PRs fusionados: rund-ai#2, rund-api#6, rund-mgp#10, rund-deployment#2
+
+**28 mayo 2026 (sesión 2)**
+- ✅ Scheduler nocturno completo:
+  - `rund-ai`: `POST /queue/enqueue-pending` + `get_pending_documents(statuses)` en ExtractionIndexService
+  - `rund-api`: CLI `app/cli/scheduler_extraccion.php` (lee estado JSON, verifica rango horario con soporte cruce medianoche, invoca rund-ai), crontab `*/30 22,23,0,1,2,3,4,5,6`, 4 endpoints REST (`GET /scheduler/status`, `POST /scheduler/start|pause|config`), `scheduler_state.json`
+  - `rund-mgp`: panel de control en vista Extracción — tag Activo/Pausado, botón toggle, configuración de rango horario colapsable, indicador de último run
+- ✅ PRs creados: rund-ai#3, rund-api#7, rund-mgp#11
+- ✅ TODO.md actualizado: scheduler → historial, JIT seleccionó TAREA 2 (auto-refresh) para reemplazarlo
 
 ### Próxima tarea sugerida
 
-Ver `TODO.md` — TAREA 1: scheduler asíncrono nocturno · TAREA 2: clasificación automática al subir · TAREA 3: documentación para migración/integración OTIC.
+Ver `TODO.md`:
+- **TAREA 1**: Clasificación automática al subir un documento (conectar `/classify` al flujo de subida en FileHandlers.php + badge "IA" en ficha docente)
+- **TAREA 2**: Auto-refresh del dashboard de extracción con cola activa (polling cada 30 s cuando `colaActiva > 0`, se detiene al llegar a 0)
+- **TAREA 3** *(estratégica)*: Documentación de migración para OTIC (3 docs en `docs/migracion/`)
 
-**Contexto estratégico nuevo:** La OTIC-ESAP integrará `rund-api`, `rund-mgp` y el stack de IA/OCR en su plataforma. La TAREA 3 produce los documentos que permitirán a un LLM ejecutar esa migración de forma semiautomatizada (rund-api PHP→Node.js, rund-mgp Angular→framework OTIC, rund-ai/ocr/ollama como microservicios).
+**Contexto estratégico:** La OTIC-ESAP integrará `rund-api`, `rund-mgp` y el stack de IA/OCR en su plataforma. La TAREA 3 produce los documentos que permitirán a un LLM ejecutar esa migración de forma semiautomatizada (rund-api PHP→Node.js, rund-mgp Angular→framework OTIC, rund-ai/ocr/ollama como microservicios).
