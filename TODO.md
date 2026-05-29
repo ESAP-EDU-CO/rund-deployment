@@ -14,32 +14,7 @@
 
 ## Tareas Activas
 
-### TAREA 1 · [FEATURE] Auto-refresh del dashboard de extracción con cola activa
-
-**Etiqueta:** `[FEATURE]`
-**Origen:** PRD §4 Objetivo 13 · Motor JIT — 28 mayo 2026
-**Prioridad:** ALTA — el scheduler nocturno ya está operativo pero los operadores no pueden monitorear el progreso sin recargar manualmente; el polling automático cierra ese loop
-
-**Contexto:**
-El dashboard de extracción muestra estadísticas en tiempo real, pero solo se actualiza al hacer clic en "Actualizar". Durante los runs nocturnos del scheduler o cuando hay cola activa (`colaActiva > 0`), el operador necesita ver el avance sin intervención. Se requiere:
-1. Implementar polling automático en el componente `Extraccion`: cuando `colaActiva > 0`, llamar a `cargar()` cada 30 segundos automáticamente
-2. Detener el polling cuando la cola llega a 0 (o el componente se destruye)
-3. Mostrar un indicador visual sutil ("actualizando automáticamente…") mientras el polling está activo
-
-**Archivos a modificar:**
-- `rund-mgp/src/app/vistas/extraccion/extraccion.ts` — `interval` + `takeUntil` para polling reactivo
-- `rund-mgp/src/app/vistas/extraccion/extraccion.html` — chip/badge "auto-refresh activo"
-- `rund-mgp/src/app/vistas/extraccion/extraccion.scss` — estilo del indicador (opcional)
-
-**Definición de done:**
-- [ ] Con `colaActiva > 0`, el dashboard se refresca automáticamente cada 30 s sin intervención
-- [ ] El polling se detiene al llegar `colaActiva = 0` o al destruir el componente (sin memory leaks)
-- [ ] El indicador "auto-refresh" aparece mientras el polling está activo y desaparece cuando para
-- [ ] Sin cola activa, el componente funciona exactamente igual que antes (sin regresión)
-
----
-
-### TAREA 2 · [FEATURE] Datos extraídos por IA visibles en la ficha del docente
+### TAREA 1 · [FEATURE] Datos extraídos por IA visibles en la ficha del docente
 
 **Etiqueta:** `[FEATURE]`
 **Origen:** PRD §4 Objetivo 12 · Motor JIT — 28 mayo 2026
@@ -130,6 +105,7 @@ El objetivo del documento es que un LLM (Claude Code, Codex, Gemini Code, etc.) 
 | 28 may 2026 | [OPS] Re-encolar documentos en "error" → "pendiente" | ✅ Completada | rund-ai: `retry_error_jobs()` + `POST /retry-error-jobs`. rund-api: `retryErrorJobs()` + ruta. rund-mgp: botón "Re-encolar errores (N)" condicional. PRs: rund-ai#2, rund-api#6, rund-mgp#10 |
 | 28 may 2026 | [FEATURE] Scheduler asíncrono de extracción en horas muertas | ✅ Completada | rund-ai: `POST /queue/enqueue-pending` + `get_pending_documents()`. rund-api: CLI `scheduler_extraccion.php` + crontab `*/30 22-6h` + 4 rutas REST (`/scheduler/status|start|pause|config`) + `scheduler_state.json`. rund-mgp: panel con tag Activo/Pausado, toggle, configuración de rango horario. PRs: rund-ai#3, rund-api#7, rund-mgp#11 |
 | 28 may 2026 | [FEATURE] Clasificación automática al subir un documento | ✅ Completada | rund-ai: ClassifierService integrado en ExtractionWorker (tras OCR, confianza ≥ 0.8 → ia_classification en callback) + fix Dockerfile `--create-home`. rund-api: AIController aplica categoría `IA_CLASIFICADO/{tipo}` en OpenKM al recibir callback. rund-mgp: DatoArchivo+ia_clasificado/ia_tipo, data.ts detecta categoría IA, FichaDocente muestra panel "Clasificados por IA" con p-tag microchip. PRs: rund-ai#4, rund-api#8, rund-mgp#12 |
+| 28 may 2026 | [FEATURE] Auto-refresh del dashboard de extracción con cola activa | ✅ Completada | rund-mgp: `interval(30_000)` + `takeUntil(destroy$)` + `filter(colaActiva > 0)` en Extraccion. Badge `p-tag info + pi-sync` visible mientras auto-refresh activo. `ngOnDestroy` sin memory leaks. PR: rund-mgp#12 (mismo branch clasificacion-automatica) |
 
 ---
 
@@ -146,3 +122,4 @@ El objetivo del documento es que un LLM (Claude Code, Codex, Gemini Code, etc.) 
 | 28 may 2026 | Retry-error-jobs completado. Instrucción directa: crear documentación para migración/integración OTIC. | TAREA 3 añadida como excepción estratégica | Documentación habilita migración semiautomatizada por LLM; no compite con TAREA 1 y 2 operacionales. |
 | 28 may 2026 | Scheduler completado (rund-ai#3, rund-api#7, rund-mgp#11). Cola nocturna operativa. Clasificación automática sigue sin conectar (Obj 9). Dashboard sin auto-refresh durante runs activos. | Clasificación automática al subir (TAREA 1) + Auto-refresh dashboard cola activa (TAREA 2) | Clasificación cierra el loop upload→AI; auto-refresh permite monitoreo del scheduler sin intervención manual. |
 | 28 may 2026 | Clasificación automática completada (rund-ai#4, rund-api#8, rund-mgp#12). Badge IA en ficha docente operativo. Datos extraídos (JSON side-car) visibles solo en dashboard pero no en ficha del docente. | Auto-refresh dashboard (TAREA 1) + Datos extraídos en ficha docente (TAREA 2) | Auto-refresh cierra loop de monitoreo del scheduler; datos extraídos expone el valor de la IA directamente al gestor en el flujo de carga. |
+| 28 may 2026 | Auto-refresh completado (rund-mgp#12). Dashboard polling reactivo sin leaks. Datos extraídos (JSON side-car) aún no visibles en ficha docente. | Datos extraídos en ficha docente (TAREA 1 renombrada) + siguiente JIT pendiente | Datos extraídos IA en ficha es la pieza final del loop upload→OCR→AI→UI visible para el gestor. |

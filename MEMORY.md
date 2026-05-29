@@ -57,6 +57,7 @@
 - [x] Panel de control del scheduler en UI: tag Activo/Pausado, toggle, configuración de rango horario, último run
 - [x] Clasificación automática IA: ExtractionWorker invoca `/classify` tras OCR (confianza ≥ 0.8), aplica categoría `IA_CLASIFICADO/{tipo}` en OpenKM vía webhook, badge "Clasificados por IA" en ficha del docente (PRs: rund-ai#4, rund-api#8, rund-mgp#12)
 - [x] Fix Dockerfile rund-ai: `--create-home` en `useradd` para que Sentence Transformers cachee modelos en `/home/rund/.cache`
+- [x] Auto-refresh dashboard extracción: `interval(30s)` + `takeUntil` + `filter(colaActiva>0)` en Extraccion; badge p-tag info visible; `ngOnDestroy` sin leaks (rund-mgp#12)
 
 ### 🚧 En progreso
 
