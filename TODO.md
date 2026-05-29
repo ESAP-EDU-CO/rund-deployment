@@ -14,32 +14,7 @@
 
 ## Tareas Activas
 
-### TAREA 1 · [FEATURE] Clasificación automática al subir un documento
-
-**Etiqueta:** `[FEATURE]`
-**Origen:** PRD §4 Objetivo 9 · Roadmap #3 — 28 mayo 2026
-**Prioridad:** ALTA — el endpoint `/classify` ya existe en rund-ai pero no está conectado al flujo de carga; conectarlo da clasificación correcta ≥ 80 % de los casos sin nuevo desarrollo en el backend AI
-
-**Contexto:**
-Cuando el gestor sube un documento en la sección "Editar documentación", rund-api lo guarda en OpenKM pero no invoca la clasificación automática. El endpoint `POST /api/v2/ai/extraer` (y el clasificador en rund-ai) ya existen. Se requiere:
-1. En rund-api, al finalizar la subida exitosa de un archivo, enviar el documento a `POST http://rund-ai:8001/classify` de forma asíncrona (fire-and-forget)
-2. Si la confianza es ≥ 0.8, actualizar la categoría del documento en OpenKM automáticamente
-3. Mostrar en la UI un indicador ("clasificado automáticamente") en la ficha del documento cuando la categoría fue asignada por IA
-
-**Archivos a modificar:**
-- `rund-api/app/src/Handlers/FileHandlers.php` — llamada asíncrona a rund-ai tras subida exitosa
-- `rund-api/app/src/Controllers/V2/AIController.php` — método `clasificar()` si no existe
-- `rund-mgp/src/app/compartidos/componentes/ficha-docente/ficha-docente.ts/html` — badge "IA" en documentos clasificados automáticamente
-
-**Definición de done:**
-- [ ] Al subir un PDF, rund-api invoca `POST /classify` en rund-ai (sin bloquear la respuesta)
-- [ ] Si confianza ≥ 0.8, la categoría del documento en OpenKM se actualiza automáticamente
-- [ ] La ficha del docente muestra un badge o indicador en documentos con categoría asignada por IA
-- [ ] La subida sigue funcionando aunque rund-ai no responda (degradación elegante)
-
----
-
-### TAREA 2 · [FEATURE] Auto-refresh del dashboard de extracción con cola activa
+### TAREA 1 · [FEATURE] Auto-refresh del dashboard de extracción con cola activa
 
 **Etiqueta:** `[FEATURE]`
 **Origen:** PRD §4 Objetivo 13 · Motor JIT — 28 mayo 2026
@@ -61,6 +36,31 @@ El dashboard de extracción muestra estadísticas en tiempo real, pero solo se a
 - [ ] El polling se detiene al llegar `colaActiva = 0` o al destruir el componente (sin memory leaks)
 - [ ] El indicador "auto-refresh" aparece mientras el polling está activo y desaparece cuando para
 - [ ] Sin cola activa, el componente funciona exactamente igual que antes (sin regresión)
+
+---
+
+### TAREA 2 · [FEATURE] Datos extraídos por IA visibles en la ficha del docente
+
+**Etiqueta:** `[FEATURE]`
+**Origen:** PRD §4 Objetivo 12 · Motor JIT — 28 mayo 2026
+**Prioridad:** ALTA — el índice de extracción ya tiene los JSONs side-car con datos estructurados; mostrarlos en la ficha cierra el loop IA → usuario sin nuevo desarrollo en el backend
+
+**Contexto:**
+Cuando el scheduler procesa un documento, genera un JSON side-car en OpenKM con campos extraídos (nombre, cédula, cargo, fechas, etc.). El endpoint `GET /api/v2/extraccion/{cedula}` ya devuelve estos datos paginados. En la ficha del docente (`carga.html` → `mgp-ficha-docente`) solo se ve si hay archivos clasificados por IA pero no qué datos se extrajeron. Se requiere:
+1. En `FichaDocente`, llamar a `GET /api/v2/extraccion/{cedula}` al cargar el docente y obtener los documentos con extracción completada
+2. Mostrar un panel colapsable "Datos extraídos por IA" con el resumen de campos clave (ej. tipo de documento, campos detectados, confianza, fecha de extracción)
+3. El panel solo aparece si existen extracciones completadas para el docente
+
+**Archivos a modificar:**
+- `rund-mgp/src/app/compartidos/servicios/data.ts` — método `getExtraccionDocente()` ya existe; usarlo en FichaDocente
+- `rund-mgp/src/app/compartidos/componentes/ficha-docente/ficha-docente.ts` — llamada al servicio + signal/propiedad `extraccionesDocente`
+- `rund-mgp/src/app/compartidos/componentes/ficha-docente/ficha-docente.html` — panel `p-panel` colapsable con tabla o chips de datos extraídos
+
+**Definición de done:**
+- [ ] Al seleccionar un docente con extracciones completadas, aparece el panel "Datos extraídos por IA"
+- [ ] El panel muestra al menos: nombre del documento, tipo detectado, confianza y fecha
+- [ ] El panel no aparece si no hay extracciones para el docente
+- [ ] Sin regresión en la carga de docentes sin datos extraídos
 
 ---
 
@@ -129,6 +129,7 @@ El objetivo del documento es que un LLM (Claude Code, Codex, Gemini Code, etc.) 
 | 28 may 2026 | [OPS] Reset de jobs bloqueados en estado "procesando" | ✅ Completada | rund-ai: `reset_stuck_jobs()` + `POST /reset-stuck-jobs`. rund-api: `resetStuckJobs()` + ruta. rund-mgp: botón condicional en dashboard de extracción |
 | 28 may 2026 | [OPS] Re-encolar documentos en "error" → "pendiente" | ✅ Completada | rund-ai: `retry_error_jobs()` + `POST /retry-error-jobs`. rund-api: `retryErrorJobs()` + ruta. rund-mgp: botón "Re-encolar errores (N)" condicional. PRs: rund-ai#2, rund-api#6, rund-mgp#10 |
 | 28 may 2026 | [FEATURE] Scheduler asíncrono de extracción en horas muertas | ✅ Completada | rund-ai: `POST /queue/enqueue-pending` + `get_pending_documents()`. rund-api: CLI `scheduler_extraccion.php` + crontab `*/30 22-6h` + 4 rutas REST (`/scheduler/status|start|pause|config`) + `scheduler_state.json`. rund-mgp: panel con tag Activo/Pausado, toggle, configuración de rango horario. PRs: rund-ai#3, rund-api#7, rund-mgp#11 |
+| 28 may 2026 | [FEATURE] Clasificación automática al subir un documento | ✅ Completada | rund-ai: ClassifierService integrado en ExtractionWorker (tras OCR, confianza ≥ 0.8 → ia_classification en callback) + fix Dockerfile `--create-home`. rund-api: AIController aplica categoría `IA_CLASIFICADO/{tipo}` en OpenKM al recibir callback. rund-mgp: DatoArchivo+ia_clasificado/ia_tipo, data.ts detecta categoría IA, FichaDocente muestra panel "Clasificados por IA" con p-tag microchip. PRs: rund-ai#4, rund-api#8, rund-mgp#12 |
 
 ---
 
@@ -144,3 +145,4 @@ El objetivo del documento es que un LLM (Claude Code, Codex, Gemini Code, etc.) 
 | 28 may 2026 | Reset jobs bloqueados completado. Scheduler sin iniciar (TAREA 1). Clasificador existente sin conectar al flujo de subida (Obj 9). | Scheduler extracción + Clasificación automática al subir | Scheduler es P1 por volumen (~12000 docs pendientes); clasificación es P2 por impacto operativo inmediato y bajo costo (endpoint ya existe). |
 | 28 may 2026 | Retry-error-jobs completado. Instrucción directa: crear documentación para migración/integración OTIC. | TAREA 3 añadida como excepción estratégica | Documentación habilita migración semiautomatizada por LLM; no compite con TAREA 1 y 2 operacionales. |
 | 28 may 2026 | Scheduler completado (rund-ai#3, rund-api#7, rund-mgp#11). Cola nocturna operativa. Clasificación automática sigue sin conectar (Obj 9). Dashboard sin auto-refresh durante runs activos. | Clasificación automática al subir (TAREA 1) + Auto-refresh dashboard cola activa (TAREA 2) | Clasificación cierra el loop upload→AI; auto-refresh permite monitoreo del scheduler sin intervención manual. |
+| 28 may 2026 | Clasificación automática completada (rund-ai#4, rund-api#8, rund-mgp#12). Badge IA en ficha docente operativo. Datos extraídos (JSON side-car) visibles solo en dashboard pero no en ficha del docente. | Auto-refresh dashboard (TAREA 1) + Datos extraídos en ficha docente (TAREA 2) | Auto-refresh cierra loop de monitoreo del scheduler; datos extraídos expone el valor de la IA directamente al gestor en el flujo de carga. |

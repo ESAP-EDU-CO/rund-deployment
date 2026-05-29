@@ -16,7 +16,7 @@
 | **URL UAT/producción** | http://172.16.234.52:4000 · http://172.16.234.52:3000 |
 | **Rama principal** | `main` |
 | **Rama activa de trabajo** | `main` (feature branches según git flow) |
-| **Último commit relevante** | `feature/scheduler-extraccion` en revisión — scheduler nocturno + panel de control (28 may 2026) |
+| **Último commit relevante** | `feature/clasificacion-automatica` en revisión — clasificación IA automática + badge en ficha docente + fix Dockerfile rund-ai (28 may 2026) |
 | **Docker Hub** | `ocastelblanco/rund-*:latest` |
 | **Desarrollador** | Oliver Castelblanco Martínez — Bogotá, Colombia (UTC-5) |
 
@@ -55,6 +55,8 @@
 - [x] Botones condicionales en dashboard: "Resetear bloqueados" y "Re-encolar errores"
 - [x] Scheduler asíncrono nocturno: CLI PHP + crontab `*/30 22-6h` + 4 endpoints REST de control (rund-ai#3, rund-api#7, rund-mgp#11)
 - [x] Panel de control del scheduler en UI: tag Activo/Pausado, toggle, configuración de rango horario, último run
+- [x] Clasificación automática IA: ExtractionWorker invoca `/classify` tras OCR (confianza ≥ 0.8), aplica categoría `IA_CLASIFICADO/{tipo}` en OpenKM vía webhook, badge "Clasificados por IA" en ficha del docente (PRs: rund-ai#4, rund-api#8, rund-mgp#12)
+- [x] Fix Dockerfile rund-ai: `--create-home` en `useradd` para que Sentence Transformers cachee modelos en `/home/rund/.cache`
 
 ### 🚧 En progreso
 
@@ -66,7 +68,6 @@
 
 - [ ] Búsqueda semántica con ChromaDB (`POST /search` en rund-ai)
 - [ ] Validación de consistencia entre documentos (`POST /validate`)
-- [ ] Clasificación automática de documentos (`POST /classify`)
 
 ### ❌ Pendiente (roadmap)
 
