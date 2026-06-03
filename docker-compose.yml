@@ -163,6 +163,7 @@ services:
     image: ollama/ollama:latest
     container_name: rund-ollama
     # ARM nativo para Apple Silicon (Metal GPU). Remover si se despliega en servidor linux/amd64.
+    platform: linux/arm64
     restart: unless-stopped
     ports:
       - "11434:11434"

@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "last_updated": "2026-04-23T00:00:00Z",
+  "apps": {
+    "rund-mgp": {
+      "usuarios": {
+        "oliver.castelblanco@esap.edu.co": ["admin"]
+      },
+      "default_roles": ["usuario"]
+    }
+  }
+}

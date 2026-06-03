@@ -1,0 +1,26 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "rund-api"
+		},
+		{
+			"path": "rund-ocr"
+		},
+		{
+			"path": "rund-auth"
+		},
+		{
+			"path": "rund-ai"
+		},
+		{
+			"path": "rund-mgp"
+		},
+		{
+			"path": "rund-pta"
+		}
+	],
+	"settings": {}
+}
