@@ -14,42 +14,31 @@
 
 ## Tareas Activas
 
-### TAREA 2 · [HOTFIX] Webhook `/api/v2/webhooks/extraction-complete` devuelve 404 (rund-api)
+### TAREA 2 · [FEATURE] Búsqueda semántica de documentos
 
-**Etiqueta:** `[HOTFIX]`
-**Origen:** Detectado en prueba de flujo completo — 02 jun 2026
-**Prioridad:** P0 — sin este webhook, la categoría `IA_CLASIFICADO/{tipo}` **nunca se aplica en OpenKM** tras completar una extracción. El índice se actualiza correctamente pero el documento queda sin categoría IA en el repositorio.
+**Etiqueta:** `[FEATURE]`
+**Origen:** PRD §4 Objetivo 15 · Motor JIT — 03 jun 2026
+**Prioridad:** ALTA — rund-ai ya tiene `POST /search` con ChromaDB implementado (⏳ sin testing); falta el proxy en rund-api y el campo de búsqueda en la UI. Cierra el loop de búsqueda semántica end-to-end.
 
 **Contexto:**
-Cuando el worker de `rund-ai` termina de procesar un documento, envía un callback `POST http://rund-api:3000/api/v2/webhooks/extraction-complete` con el resultado. La ruta no existe en rund-api → 404. Como consecuencia, la categorización `IA_CLASIFICADO/cedula` (etc.) nunca se aplica sobre el nodo en OpenKM, aunque el índice `extraction_index.json` sí quede actualizado.
-
-La ruta existe en código (implementada en la TAREA de clasificación automática, rund-api#8) pero no está registrada en el router, o el método PHP que la maneja tiene un nombre incorrecto.
+`rund-ai` tiene `POST /search` que busca en el índice vectorial ChromaDB y retorna documentos similares a una consulta en lenguaje natural. No existe endpoint proxy en rund-api ni UI que lo exponga. Añadirlo permite a los gestores buscar documentos por significado ("certificado de maestría en educación") en lugar de por nombre exacto.
 
 Se requiere:
-1. Verificar `rund-api/app/routes.php` (o archivo equivalente): registrar la ruta `POST /api/v2/webhooks/extraction-complete`
-2. Verificar que el método receptor en `AIController.php` (o `WebhookController.php`) existe y maneja correctamente el payload de rund-ai
-3. Probar con `curl -X POST http://localhost:3000/api/v2/webhooks/extraction-complete -H 'Content-Type: application/json' -d '{...}'`
+1. En `AIController.php`, nuevo método `searchDocuments()` que proxy a `POST http://rund-ai:8001/search`
+2. Ruta `GET /api/v2/extraccion/buscar?q=<texto>&limit=10` registrada en el router
+3. En `data.ts`, nuevo método `searchDocumentos(query: string)`
+4. En la vista Extracción, campo de búsqueda con resultados (nombre, tipo, similitud) debajo del dashboard
 
-**Archivos a revisar:**
-- `rund-api/app/routes.php` (o similar) — registro de la ruta POST
-- `rund-api/app/src/Controllers/V2/AIController.php` — método `extractionComplete()` o similar
+**Archivos a modificar:**
+- `rund-api/app/src/Controllers/V2/AIController.php` — método `searchDocuments()`
+- `rund-mgp/src/app/compartidos/servicios/data.ts` — método `searchDocumentos(query)`
+- `rund-mgp/src/app/vistas/extraccion/extraccion.ts` + `.html` — input + tabla de resultados
 
 **Definición de done:**
-- [ ] `POST /api/v2/webhooks/extraction-complete` retorna 200
-- [ ] Tras procesar un documento, OpenKM muestra la categoría `IA_CLASIFICADO/{tipo}` en el nodo
-- [ ] Sin regresión en el flujo de carga y extracción existente
-
----
-
-### TAREA 2-NEXT · [FEATURE] Búsqueda semántica de documentos — desplazada por HOTFIX
-
-> Desplazada temporalmente por TAREA 2 (webhook P0). Retomar una vez mergeado el hotfix.
-
-`rund-ai` tiene `POST /search` con ChromaDB (⏳ sin testing); falta proxy PHP + campo de búsqueda en UI.
-- `AIController.php` → `searchDocuments()` → proxy a `POST http://rund-ai:8001/search`
-- Ruta `GET /api/v2/extraccion/buscar?q=<texto>&limit=10`
-- `data.ts` → `searchDocumentos(query)`
-- Vista Extracción → input + tabla de resultados (nombre, tipo, similitud)
+- [ ] `GET /api/v2/extraccion/buscar?q=texto` retorna documentos con `nombre`, `tipo`, `similitud` (0–1) y `cedula_profesor`
+- [ ] Campo de búsqueda en vista Extracción dispara la consulta y muestra resultados
+- [ ] Estado vacío visible cuando no hay resultados
+- [ ] Sin regresión en el dashboard de métricas existente
 ---
 
 ### TAREA 3 · [DOC] Documentación de migración e integración para la OTIC
@@ -122,6 +111,7 @@ El objetivo del documento es que un LLM (Claude Code, Codex, Gemini Code, etc.) 
 | 02 jun 2026 | [FEATURE] Datos extraídos por IA visibles en la ficha del docente | ✅ Completada | rund-mgp: `@Input() cedula` en FichaDocente + `cargarExtracciones()` reactivo + panel colapsable `p-panel` con `p-table` (nombre, tipo, confianza, fecha). Skeleton de carga. `ngOnDestroy` sin leaks. carga.html pasa `[cedula]="profesorSeleccionado[1]"`. PR: rund-mgp#13 |
 | 02 jun 2026 | [HOTFIX] Reset automático de CargaDocumento + refresco de Editar documentación | ✅ Completada | rund-mgp#14 (feature/reset-carga-refresh-edicion). 3 fixes: (1) NG0100 en CargaDocumento — side effects en progresoCarga() movidos a ngDoCheck+Promise.resolve; (2) JSON side-car sin extracción devuelve 200+null en vez de 404; (3) DataService.archivosCargados$ Subject notifica a Edicion para refrescar dropdown y árbol de archivos. |
 | 02 jun 2026 | [HOTFIX] by_category/professors dict corruption en extraction_index_service.py | ✅ Completada | rund-ai: PHP json_encode convierte `{}` vacío a `[]` → Python falla al indexar como dict. Fix en `_load_index()`: normaliza list→dict para `by_category` y `professors`. PR: rund-ai fix/extraction-index-dict-corruption |
+| 03 jun 2026 | [HOTFIX] IA_CLASIFICADO nunca se aplica en OpenKM tras extracción | ✅ Completada | rund-ai: `ia_classification` solo se generaba en `_extract_with_ocr()`, nunca en la ruta multimodal activa. Fix: fallback `job.tipo_documento` con confidence=0.9 antes del callback. Webhook y ruta PHP ya existían y funcionaban correctamente. PR: rund-ai#7 |
 | 03 jun 2026 | [HOTFIX] extraction_index.json nunca persiste — Desglose por categoría siempre vacío | ✅ Completada | 3 bugs encadenados: (1) `subirJson` usaba `findArchivo` (índice búsqueda stale) → devolvía null → `createSimple` fallaba con 500 porque el archivo ya existía; fix: `getFileUuidByPath` vía `repository/getNodeUuid` (ruta directa). (2) `_load_index()` no reconstruía claves faltantes → `KeyError: 'total_documents'/'statistics'` en `add_document()` y `get_statistics()`; fix: `_deep_merge()` sobre `_create_empty_index()`. (3) Gunicorn 4 workers → race condition con threading.Lock(); fix: 1 worker + 4 threads + `fcntl.flock`. PRs: rund-api fix/categorias-openkm-sobreescritura, rund-ai fix/extraction-index-dict-corruption |
 
 ---
@@ -143,3 +133,4 @@ El objetivo del documento es que un LLM (Claude Code, Codex, Gemini Code, etc.) 
 | 02 jun 2026 | Datos extraídos en ficha completados (rund-mgp#13). Loop OCR→IA→UI cerrado. ChromaDB implementada en rund-ai pero sin endpoint proxy ni UI (⏳ sin testing). | Búsqueda semántica (TAREA 2) + TAREA 3 doc sigue activa | Búsqueda semántica expone el valor de ChromaDB sin nuevo desarrollo en rund-ai; solo proxy PHP + campo en UI. |
 | 02 jun 2026 | Hotfixes UX completados (rund-mgp#14: NG0100, 404 side-car, reset carga, refresco edición). Bug crítico by_category/professors en rund-ai corregido (commit pendiente). Prueba flujo completo: webhook POST /api/v2/webhooks/extraction-complete devuelve 404 → IA_CLASIFICADO no se aplica en OpenKM. Búsqueda semántica desplazada. | Webhook hotfix (TAREA 2) + TAREA 3 doc sigue activa | Webhook es P0: sin él la categorización IA en OpenKM nunca se completa tras extracción. |
 | 03 jun 2026 | Hotfixes extraction_index completados (3 bugs: subirJson stale UUID, _load_index KeyError, Gunicorn race condition). Desglose por categoría operativo. docker-compose ollama platform:arm64 añadido. Webhook 404 sigue pendiente. | Webhook hotfix (TAREA 2) sigue como P0 + TAREA 3 doc sigue activa | Webhook es el último eslabón roto del loop upload→AI→OpenKM. |
+| 03 jun 2026 | Webhook operativo (ruta existía, bug real: ia_classification=null en ruta multimodal). Loop upload→OCR→AI→IA_CLASIFICADO→OpenKM cerrado. PRs: rund-ai#7. | Búsqueda semántica (TAREA 2 actualizada) + TAREA 3 doc | Búsqueda semántica es la siguiente pieza de valor sin nuevo desarrollo en rund-ai. |
