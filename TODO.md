@@ -14,28 +14,30 @@
 
 ## Tareas Activas
 
-### TAREA 2 · [FEATURE] Estadísticas de cobertura agregada en dashboard de Extracción
+### TAREA 2 · [FEATURE] Detalle de campos extraídos por documento en FichaDocente
 
 **Etiqueta:** `[FEATURE]`
 **Origen:** Motor JIT — 04 jun 2026
-**Prioridad:** MEDIA — El dashboard de extracción muestra totales globales pero no el desglose de cobertura por tipo de documento. El endpoint `/extraction/statistics` ya retorna `by_category`; solo hace falta consumirlo en la UI.
+**Prioridad:** MEDIA — El gestor ve la lista de extracciones (nombre, tipo, confianza, fecha) pero no los campos reales extraídos (número de cédula, institución, cargo, etc.). Un botón "Ver datos" por fila con un `p-dialog` cierra el loop IA→UI.
 
 **Contexto:**
-El gestor ahora puede ver en FichaDocente qué tipos están cubiertos para un profesor individual (TAREA 1 completada). El siguiente paso natural es la vista agregada: en el dashboard de Extracción, mostrar un panel con el conteo de documentos completados por tipo de los 6 estándar. Los datos vienen de `GET /api/v2/extraccion/estadisticas` → campo `by_category`. Sin nueva API, sin cambios en rund-ai ni rund-api.
+`extraccionesDocente` ya está cargado en FichaDocente. Verificar si el campo `datos_extraidos` viene en la respuesta de `getExtraccionDocente`. Si viene, el diálogo es 100% frontend. Si no, agregar el campo al query de `GET /api/v2/extraccion/profesor/{cedula}` en rund-api.
 
 Se requiere:
-1. En `extraccion.ts`: mapear `estadisticas.by_category` → array `{tipo, label, count}[]`
-2. En `extraccion.html`: panel "Cobertura por tipo" con stat-cards o chips con el conteo, integrado en el dashboard existente
+1. En `ficha-docente.ts`: `selectedExtraccion: any = null` + método `verDetalle(doc)` + cierre
+2. En `ficha-docente.html`: columna "Ver" en la tabla + `p-dialog` con campos clave:valor
+3. (condicional) `rund-api`: incluir `datos_extraidos` si no viene en la respuesta actual
 
 **Archivos a modificar:**
-- `rund-mgp/src/app/vistas/extraccion/extraccion.ts` — getter/computed `coberturaPorTipo`
-- `rund-mgp/src/app/vistas/extraccion/extraccion.html` — panel stat-cards por tipo
+- `rund-mgp/src/app/compartidos/componentes/ficha-docente/ficha-docente.ts`
+- `rund-mgp/src/app/compartidos/componentes/ficha-docente/ficha-docente.html`
+- (condicional) `rund-api`: endpoint `/extraccion/profesor/{cedula}`
 
 **Definición de done:**
-- [ ] Panel "Cobertura por tipo" visible cuando `estadisticas` está cargado
-- [ ] 6 entradas: tipo, label legible, conteo de documentos completados
-- [ ] Conteo 0 visible con opacidad reducida (no oculto)
-- [ ] Sin regresión en el dashboard de extracción existente
+- [ ] Botón "Ver" en cada fila de la tabla de extracciones
+- [ ] Dialog muestra campos extraídos en formato clave:valor legible
+- [ ] Estado vacío cuando `datos_extraidos` es null o vacío
+- [ ] Cerrar dialog no afecta el estado de la tabla
 
 ---
 
@@ -113,6 +115,7 @@ El objetivo del documento es que un LLM (Claude Code, Codex, Gemini Code, etc.) 
 | 03 jun 2026 | [FEATURE] Búsqueda semántica de documentos | ✅ Completada | rund-ai: SearchService Jaccard token overlap sobre extraction index + POST /search. rund-api: GET /extraccion/buscar proxy. rund-mgp: panel búsqueda con input + tabla (nombre, tipo, similitud, cédula) + estado vacío. PRs: rund-ai#8, rund-api#11, rund-mgp#15 |
 | 04 jun 2026 | [FEATURE] Validación de consistencia entre documentos de un profesor | ✅ Completada | rund-ai#9: ValidatorService 5 checks metadatos + nombre_inconsistente Jaccard<0.75 (detecta errores OCR como "Fakeline"≠"Jakeline"); fix _schema() normaliza TITULOS_DE_FORMACION→certificado_academico; validate.py deja de ser stub 501. rund-api#12: validateDocente() + POST /extraccion/validar/{cedula}. rund-mgp#16: validateDocente() en Data, botón Validar + panel issues (skeleton, score tag, severidades, estado vacío). |
 | 04 jun 2026 | [FEATURE] Cobertura de tipos de documento en FichaDocente | ✅ Completada | rund-mgp: getter `coberturaTipos` (6 tipos estándar vs `extraccionesDocente` ya cargado) + panel "Cobertura documental" con chips success/danger antes de "Datos extraídos por IA". Estado vacío cuando `extraccionesDocente.length===0`. Sin nueva API. |
+| 04 jun 2026 | [FEATURE] Estadísticas de cobertura agregada en dashboard de Extracción | ✅ Completada | rund-mgp#17: getter `coberturaPorTipo` en `extraccion.ts` mapea 6 tipos vs `categorias[]` ya cargado. Panel "Cobertura por tipo" con tarjetas count+label entre métricas globales y scheduler. Conteo 0 con opacidad reducida. Dark mode incluido. |
 | 03 jun 2026 | [HOTFIX] 6 hotfixes UX — datos demográficos, fecha extracción, skeletons carga, dark mode | ✅ Completada | (1) `DocumentService.php`: búsqueda cédula por categoría `TIPO/CEDULA` en lugar de `name=cedula` → campos Género/Grupo étnico poblados. (2) `ficha-docente.ts`: selector `multiple` con valor `string` normalizado a array → campo Posgrado poblado. (3) `ficha-docente.html`: `date` pipe sin locale `es-CO` no registrado → Fecha extracción visible. (4) `carga.ts/html`: `p-skeleton` mientras carga CSV → elimina "No results found". (5) `edicion.ts`: progreso `cargandoProfesores` movido post-await → barra real. (6) `app.ts` + `extraccion.scss`: clase `app-dark` en `<html>` sincronizada con `prefers-color-scheme` + `:host-context` en scheduler-panel. rund-api: commit `78fb771`. rund-mgp: commit `b167d29`. |
 | 03 jun 2026 | [HOTFIX] extraction_index.json nunca persiste — Desglose por categoría siempre vacío | ✅ Completada | 3 bugs encadenados: (1) `subirJson` usaba `findArchivo` (índice búsqueda stale) → devolvía null → `createSimple` fallaba con 500 porque el archivo ya existía; fix: `getFileUuidByPath` vía `repository/getNodeUuid` (ruta directa). (2) `_load_index()` no reconstruía claves faltantes → `KeyError: 'total_documents'/'statistics'` en `add_document()` y `get_statistics()`; fix: `_deep_merge()` sobre `_create_empty_index()`. (3) Gunicorn 4 workers → race condition con threading.Lock(); fix: 1 worker + 4 threads + `fcntl.flock`. PRs: rund-api fix/categorias-openkm-sobreescritura, rund-ai fix/extraction-index-dict-corruption |
 
@@ -139,4 +142,5 @@ El objetivo del documento es que un LLM (Claude Code, Codex, Gemini Code, etc.) 
 | 03 jun 2026 | 6 hotfixes UX completados (ver historial). Ramas limpiadas. Búsqueda semántica y TAREA 3 doc siguen activas. | TAREA 2 búsqueda semántica + TAREA 3 doc | Hotfixes no bloquean TAREA 2; búsqueda semántica sigue siendo la próxima pieza de valor. |
 | 03 jun 2026 | Búsqueda semántica completada (rund-ai#8, rund-api#11, rund-mgp#15). SearchService implementado con Jaccard token overlap. Panel búsqueda en UI con tabla resultados. POST /validate en rund-ai es stub ⏳ sin testing, igual que /search lo era. | Validación de consistencia (TAREA 1) + TAREA 3 doc | Validación cierra el loop de calidad documental; mismo patrón que búsqueda (proxy PHP + UI Angular, rund-ai ya tiene el endpoint). |
 | 04 jun 2026 | Validación de consistencia completada (rund-ai#9, rund-api#12, rund-mgp#16). Cobertura de tipos completada (rund-mgp: getter coberturaTipos + panel chips). by_category en extraction_index operativo. Próxima brecha: dashboard de extracción muestra totales globales pero no desglose por tipo. `by_category` ya disponible en `/extraccion/estadisticas`. | Cobertura agregada en dashboard Extracción (TAREA 2) + TAREA 3 doc | Cobertura individual ya visible en FichaDocente; la vista agregada completa la perspectiva de gestión sin nueva API. |
+| 04 jun 2026 | Cobertura agregada completada (rund-mgp#17: getter coberturaPorTipo + panel tarjetas en dashboard Extracción). Gestor puede ver cobertura individual (FichaDocente) y agregada (dashboard). Brecha restante: gestor ve lista de extracciones pero no los campos reales extraídos (número cédula, institución, cargo). `datos_extraidos` puede venir en resp. actual o requerir cambio mínimo en rund-api. | Detalle de campos extraídos en FichaDocente (TAREA 2) + TAREA 3 doc | Mostrar los campos extraídos cierra el loop IA→UI; el gestor puede verificar calidad de la extracción sin entrar al JSON side-car en OpenKM. |
 | 04 jun 2026 | Validación de consistencia completada (rund-ai#9, rund-api#12, rund-mgp#16 ✅ merged). ValidatorService: 5 checks de metadatos + nombre_inconsistente Jaccard (detecta "Fakeline"≠"Jakeline"). Fix normalización tipo_documento vía DOCUMENT_TYPE_TO_SCHEMA. | Cobertura de tipos de documento en FichaDocente (TAREA 1) + TAREA 3 doc | Cobertura es la siguiente pieza de valor: usa extraccionesDocente ya cargado, sin nueva API, muestra al gestor qué tipos faltan en la hoja de vida. |
