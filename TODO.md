@@ -14,39 +14,6 @@
 
 ## Tareas Activas
 
-### TAREA 2 · [OPS] Verificar flujo LDAP real en entorno de desarrollo
-
-**Etiqueta:** `[OPS]`
-**Origen:** Motor JIT — 05 jun 2026
-**Prioridad:** MEDIA — La infraestructura de auth está completa (rund-api#13 + rund-mgp#20 merged). Queda verificar que `rund-auth` conecta correctamente con el LDAP/AD de ESAP en el entorno real y que el flujo login→sesión→datos funciona end-to-end.
-
-**Contexto:**
-Con los cambios merged, el flujo completo es:
-1. Usuario llena formulario → `POST /api/v2/auth/login`
-2. PHP llama `rund-auth` → LDAP/AD ESAP → devuelve user + JWT
-3. PHP guarda JWT en sesión PHP (cookie `RUND_SESSION`)
-4. Angular recibe `{ user, session_id }` y guarda usuario en signal
-5. Requests subsiguientes incluyen cookie → backend valida sesión
-
-La variable `DEV_FAKE_LOGIN=true` en `rund-auth` sigue activa para desarrollo sin AD.
-
-**Verificaciones pendientes:**
-1. Con `DEV_FAKE_LOGIN=true`: login dev funciona → app carga sin loop ✓
-2. Con LDAP real: credenciales ESAP auténticas funcionan
-3. Sesión expira correctamente tras inactividad (8 horas)
-4. `rund-auth` healthcheck responde desde rund-api
-
-**Archivos relevantes (no modificar, solo verificar):**
-- `rund-api/app/src/Services/AuthService.php` — `loginWithLDAP()`
-- `rund-auth/.env` — `LDAP_ENABLED`, `DEV_FAKE_LOGIN`
-
-**Definición de done:**
-- [ ] Login con credenciales dev funciona sin loop en consola
-- [ ] `GET /api/v2/auth/health` reporta rund-auth healthy
-- [ ] Acceder a `/listados` sin sesión redirige a `/login` (no loop)
-
----
-
 ### TAREA 3 · [DOC] Documentación de migración e integración para la OTIC
 
 **Etiqueta:** `[DOC]`
@@ -104,6 +71,7 @@ El objetivo del documento es que un LLM (Claude Code, Codex, Gemini Code, etc.) 
 
 | Fecha | Tarea | Estado | Notas |
 |-------|-------|--------|-------|
+| 05 jun 2026 | [OPS] Verificar flujo LDAP real en entorno de dev | ⏸ Cancelada | Producto entregado sin smoke-tests adicionales. Infraestructura auth completa (rund-api#13 + rund-mgp#20). |
 | 14 may 2026 | [SEGURIDAD] Integrar autenticación en rund-mgp (Angular) | ⏸ Postergada | Desplazada por prioridad operacional — se retoma en fase de seguridad |
 | 19 may 2026 | [FEATURE] Simplificar menú + ítem activo + fecha de nacimiento | ✅ Completada | rund-mgp#5 + rund-api#1 fusionados |
 | 20 may 2026 | [HOTFIX] Docentes faltantes en desplegable Editar documentación | ✅ Completada | rund-api#2 + rund-mgp#6. Causa: search/find sin categorías + nombre de cédula no estándar |
@@ -156,3 +124,4 @@ El objetivo del documento es que un LLM (Claude Code, Codex, Gemini Code, etc.) 
 | 04 jun 2026 | Validación de consistencia completada (rund-ai#9, rund-api#12, rund-mgp#16 ✅ merged). ValidatorService: 5 checks de metadatos + nombre_inconsistente Jaccard (detecta "Fakeline"≠"Jakeline"). Fix normalización tipo_documento vía DOCUMENT_TYPE_TO_SCHEMA. | Cobertura de tipos de documento en FichaDocente (TAREA 1) + TAREA 3 doc | Cobertura es la siguiente pieza de valor: usa extraccionesDocente ya cargado, sin nueva API, muestra al gestor qué tipos faltan en la hoja de vida. |
 | 05 jun 2026 | Detalle de campos extraídos completado (rund-mgp#19 merged). Campos en datos.data del side-car (no datos_extraidos). isObject+pre para objetos anidados. Width fijo eliminado del diálogo. Rama eliminada, repo limpio. Sistema de autenticación (rund-auth ya desplegado con LDAP+JWT) sigue sin conectarse al frontend Angular. | Integración Angular con rund-auth (TAREA 2) + TAREA 3 doc | Auth es el gap de seguridad más crítico: rund-auth está listo, solo falta el flujo login→JWT→interceptor en Angular. |
 | 05 jun 2026 | Auth integration completada (rund-api#13 + rund-mgp#20 merged). Global middleware PHP enforces sesión en todas las rutas /api/v2. Fix loop infinito data.init() en Angular. Infraestructura Angular de auth ya existía completa (Auth service, interceptor, authGuard, Login component). Repos limpios. | Verificar flujo LDAP real en entorno dev (TAREA 2 nueva) + TAREA 3 doc | Código completo; queda smoke-test del login real con DEV_FAKE_LOGIN y con LDAP. |
+| 05 jun 2026 | Producto entregado tal como está. Testing en producción y verificación LDAP cancelados. TAREA 2 eliminada. Solo TAREA 3 (documentación migración OTIC) activa. | Solo TAREA 3 doc | Entrega del producto sin smoke-tests adicionales. |

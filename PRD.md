@@ -69,16 +69,16 @@ RUND centraliza la gestión documental de hojas de vida profesorales en una plat
 | 4 | Generar certificados de vinculación en Word y PDF | Certificado generado en < 5 segundos | ✅ Implementado |
 | 5 | Extraer texto de documentos escaneados con OCR | Confianza ≥ 85 % en documentos estándar | ✅ Implementado |
 | 6 | Extraer datos estructurados con IA (cédula, cargo, fechas) | Confianza ≥ 85 % en los 6 tipos de documento | ✅ Implementado |
-| 7 | Proteger todas las rutas de la API con autenticación | 0 endpoints de datos accesibles sin token válido | 🚧 En progreso |
-| 8 | Integrar autenticación en el frontend Angular | Flujo login → dashboard → logout funcionando | 🚧 En progreso |
-| 9 | Clasificar documentos automáticamente al cargarlos | Clasificación correcta en ≥ 80 % de los casos | ⏳ Sin testing |
-| 10 | Permitir búsqueda semántica de documentos | Resultados relevantes en < 2 segundos | ⏳ Sin testing |
+| 7 | Proteger todas las rutas de la API con autenticación | 0 endpoints de datos accesibles sin token válido | ✅ Implementado |
+| 8 | Integrar autenticación en el frontend Angular | Flujo login → dashboard → logout funcionando | ✅ Implementado |
+| 9 | Clasificar documentos automáticamente al cargarlos | Clasificación correcta en ≥ 80 % de los casos | ✅ Implementado |
+| 10 | Permitir búsqueda semántica de documentos | Resultados relevantes en < 2 segundos | ✅ Implementado |
 | 11 | Procesar la carga inicial de ~12 000 documentos | Carga completa en ≤ 30 días (400 docs/día) | 🚧 En progreso |
 | 12 | Monitorear el estado de extracción de datos con IA | Dashboard con totales, tasa de éxito y documentos pendientes | ✅ Implementado |
-| 13 | Completar extracción pendiente en horas de baja carga | Job asíncrono configurable que procesa el backlog fuera del horario de uso | ❌ Pendiente |
+| 13 | Completar extracción pendiente en horas de baja carga | Job asíncrono configurable que procesa el backlog fuera del horario de uso | ✅ Implementado |
 | 14 | Exponer datos extraídos vía API paginada por docente | Endpoints con conteo, paginación y filtros por cédula | ✅ Implementado |
 | 15 | Recolectar fecha de nacimiento y calcular rango etario automáticamente | Date picker en Carga masiva → rango calculado + almacenado; job nocturno actualiza OpenKM | ✅ Implementado |
-| 16 | Gestión operacional de la sección Extracción de datos | Reset de jobs bloqueados, inicio/pausa manual del scheduler, rangos horarios configurables | 🚧 En progreso |
+| 16 | Gestión operacional de la sección Extracción de datos | Reset de jobs bloqueados, inicio/pausa manual del scheduler, rangos horarios configurables | ✅ Implementado |
 
 ---
 
@@ -207,28 +207,28 @@ Solo accesible para usuarios con rol `admin`. Incluye:
 
 ## 6. Roadmap de Funcionalidades Futuras
 
-> Estas funcionalidades **no están implementadas** hoy. Se incluyen para orientar el desarrollo futuro.
+> Historial de funcionalidades planificadas. Las marcadas con ✅ fueron implementadas y entregadas; las sin marcar quedan fuera del alcance de la entrega.
 
 | # | Funcionalidad | Prioridad | Fase | Descripción |
 |---|---------------|-----------|------|-------------|
-| 1 | Integración completa del login en el frontend | **Alta** | 4 | Los guardas de ruta y el interceptor HTTP de Angular aún no están integrados con rund-auth |
-| 2 | Protección de todas las rutas de la API | **Alta** | 4 | Varios endpoints de rund-api aún no requieren token válido |
-| 3 | Clasificación automática al subir un documento | **Alta** | 4 | El endpoint de clasificación existe pero no está conectado al flujo de carga |
-| 4 | Validación de consistencia entre documentos | Media | 4 | Detectar inconsistencias (ej. nombres diferentes en cédula y certificado) |
-| 5 | Detector de documentos duplicados | Media | 4 | Identificar cuando se sube el mismo documento dos veces |
-| 6 | OCR optimizado para cédulas colombianas | Media | 5 | Plantillas y detección de campos por posición para documentos de identidad |
-| 7 | Post-procesamiento OCR con corrección automática | Media | 5 | Regex y validación para corregir errores comunes de OCR |
-| 8 | Dashboard de validación y calidad | Media | 5 | Vista de qué documentos tienen datos incompletos o inconsistentes |
-| 9 | Búsqueda semántica de documentos | Media | 6 | El motor de búsqueda (ChromaDB) está implementado pero sin testing en producción |
-| 10 | Análisis de tendencias y reportes automáticos | Baja | 6 | Resúmenes automáticos generados por IA |
-| 11 | Rate limiting en los endpoints de autenticación | **Alta** | Seguridad | Limitar a 5 intentos/minuto por IP en el endpoint de login |
-| 12 | Habilitación de HTTPS en producción | **Alta** | Seguridad | La comunicación actual es HTTP sin cifrado |
-| 13 | Audit logging de eventos de autenticación | Media | Seguridad | Registro de todos los login/logout para auditoría |
-| 14 | Sección "Extracción de datos" en el frontend | **Alta** | 4 | ✅ Dashboard implementado: total cargados, JSONs generados, pendientes, errores, tasa de éxito, cola activa. Visible en menú lateral para gestor+. |
-| 15 | Job asíncrono de extracción en horas muertas | **Alta** | 4 | Tarea configurable que completa el backlog de extracción fuera del horario de uso. Controles en la UI: rangos horarios, inicio manual, pausa. |
-| 16 | API de consulta de JSONs extraídos por docente | **Alta** | 4 | `GET /api/v2/extraccion/{cedula}` — documentos extraídos, conteo y paginación. |
-| 17 | Corrección: docentes faltantes en desplegable de Editar documentación | **Crítica** | Hotfix | ✅ Corregido: DocumentService ahora infiere TIPO/FORMATO de path y mimeType cuando OpenKM no devuelve categorías. getInfoProfesor() retorna datos aunque la cédula tenga nombre no estándar. |
-| 18 | Reset de jobs bloqueados de extracción | **Media** | 4 | Los jobs que quedan en estado "procesando" con la cola vacía (sesiones anteriores) deben poder resetearse a "pendiente" desde la UI o un endpoint de administración. |
+| 1 | Integración completa del login en el frontend | **Alta** | 4 | ✅ Implementado: rund-mgp#20. Guards, interceptor y login component integrados con rund-auth. |
+| 2 | Protección de todas las rutas de la API | **Alta** | 4 | ✅ Implementado: rund-api#13. Middleware global enforces sesión en todas las rutas /api/v2. |
+| 3 | Clasificación automática al subir un documento | **Alta** | 4 | ✅ Implementado: rund-ai#4 + rund-api#8 + rund-mgp#12. |
+| 4 | Validación de consistencia entre documentos | Media | 4 | ✅ Implementado: rund-ai#9 + rund-api#12 + rund-mgp#16. ValidatorService con 5 checks + Jaccard. |
+| 5 | Detector de documentos duplicados | Media | 4 | No entregado. |
+| 6 | OCR optimizado para cédulas colombianas | Media | 5 | No entregado. |
+| 7 | Post-procesamiento OCR con corrección automática | Media | 5 | No entregado. |
+| 8 | Dashboard de validación y calidad | Media | 5 | No entregado. |
+| 9 | Búsqueda semántica de documentos | Media | 6 | ✅ Implementado: rund-ai#8 + rund-api#11 + rund-mgp#15. SearchService con Jaccard token overlap. |
+| 10 | Análisis de tendencias y reportes automáticos | Baja | 6 | No entregado. |
+| 11 | Rate limiting en los endpoints de autenticación | **Alta** | Seguridad | No entregado. |
+| 12 | Habilitación de HTTPS en producción | **Alta** | Seguridad | No entregado. Pendiente coordinación con OTIC-ESAP. |
+| 13 | Audit logging de eventos de autenticación | Media | Seguridad | No entregado. |
+| 14 | Sección "Extracción de datos" en el frontend | **Alta** | 4 | ✅ Implementado: rund-api#3 + rund-mgp#7. Dashboard con totales, tasa de éxito, cola activa. |
+| 15 | Job asíncrono de extracción en horas muertas | **Alta** | 4 | ✅ Implementado: rund-ai#3 + rund-api#7 + rund-mgp#11. Scheduler nocturno con crontab y panel UI. |
+| 16 | API de consulta de JSONs extraídos por docente | **Alta** | 4 | ✅ Implementado: rund-api#4 + rund-mgp#8. `GET /api/v2/extraccion/{cedula}` con paginación. |
+| 17 | Corrección: docentes faltantes en desplegable de Editar documentación | **Crítica** | Hotfix | ✅ Corregido: DocumentService ahora infiere TIPO/FORMATO de path y mimeType cuando OpenKM no devuelve categorías. |
+| 18 | Reset de jobs bloqueados de extracción | **Media** | 4 | ✅ Implementado: rund-ai#2 + rund-api#6 + rund-mgp#10. Botón condicional en dashboard. |
 
 ---
 

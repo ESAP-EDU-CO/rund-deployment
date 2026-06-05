@@ -847,23 +847,23 @@ curl http://localhost:4000/health  # MGP
 - ✅ API de extracción (/extract)
 - ✅ Archivos JSON side-car en OpenKM
 
-### 🚧 Fase 4: EN PROGRESO - Clasificación y Validación
-- ⏳ Clasificador automático (API implementada, pendiente testing)
-- ⏳ Validación de consistencia entre documentos (API implementada)
-- ❌ Detector de duplicados
-- ❌ Dashboard de validación
+### ✅ Fase 4: COMPLETADA (parcial) - Clasificación y Validación
+- ✅ Clasificador automático (rund-ai#4, rund-api#8, rund-mgp#12)
+- ✅ Validación de consistencia entre documentos (rund-ai#9, rund-api#12, rund-mgp#16)
+- ⏭ Detector de duplicados (no entregado)
+- ⏭ Dashboard de validación (no entregado)
 
-### 📋 Fase 5: PENDIENTE - OCR Optimizado
-- ❌ Templates para cédulas colombianas
-- ❌ Post-procesamiento y corrección
-- ❌ Detección de campos por posición
-- ❌ Validación con regex
+### ⏭ Fase 5: NO ENTREGADA - OCR Optimizado
+- ⏭ Templates para cédulas colombianas
+- ⏭ Post-procesamiento y corrección
+- ⏭ Detección de campos por posición
+- ⏭ Validación con regex
 
-### 📋 Fase 6: PENDIENTE - Búsqueda y Análisis
-- ⏳ Búsqueda semántica con ChromaDB (API implementada, pendiente testing)
-- ❌ Análisis de tendencias
-- ❌ Reportes automatizados
-- ❌ Dashboard de estadísticas
+### ✅ Fase 6: COMPLETADA (parcial) - Búsqueda y Análisis
+- ✅ Búsqueda semántica con ChromaDB (rund-ai#8, rund-api#11, rund-mgp#15)
+- ⏭ Análisis de tendencias (no entregado)
+- ⏭ Reportes automatizados (no entregado)
+- ⏭ Dashboard de estadísticas (no entregado)
 
 **Leyenda:**
 - ✅ Completado
@@ -898,8 +898,8 @@ curl http://localhost:4000/health  # MGP
 
 ---
 
-**Última actualización**: 26 de noviembre de 2025
-**Versión**: 3.0
+**Última actualización**: 05 junio 2026
+**Versión**: 3.2
 
 **Cambios en v3.0:**
 - ✅ Sistema de procesamiento asíncrono con cola FIFO

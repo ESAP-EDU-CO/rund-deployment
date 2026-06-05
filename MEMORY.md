@@ -2,7 +2,7 @@
 
 > Este documento es la fuente de verdad para retomar el proyecto sin contexto previo.
 > Se actualiza al cierre de cada sesión de trabajo relevante.
-> **Última actualización:** 28 mayo 2026
+> **Última actualización:** 05 jun 2026
 
 ---
 
@@ -10,7 +10,7 @@
 
 | Campo | Valor |
 |-------|-------|
-| **Versión** | 3.1 (UAT en curso) |
+| **Versión** | 3.2 (Entregado — 05 jun 2026) |
 | **Fase** | UAT iniciada en febrero 2026 — módulos core probados |
 | **URL desarrollo** | http://localhost:4000 (frontend) · http://localhost:3000 (API) |
 | **URL UAT/producción** | http://172.16.234.52:4000 · http://172.16.234.52:3000 |
@@ -58,20 +58,22 @@
 - [x] Clasificación automática IA: ExtractionWorker invoca `/classify` tras OCR (confianza ≥ 0.8), aplica categoría `IA_CLASIFICADO/{tipo}` en OpenKM vía webhook, badge "Clasificados por IA" en ficha del docente (PRs: rund-ai#4, rund-api#8, rund-mgp#12)
 - [x] Fix Dockerfile rund-ai: `--create-home` en `useradd` para que Sentence Transformers cachee modelos en `/home/rund/.cache`
 - [x] Auto-refresh dashboard extracción: `interval(30s)` + `takeUntil` + `filter(colaActiva>0)` en Extraccion; badge p-tag info visible; `ngOnDestroy` sin leaks (rund-mgp#12)
+- [x] Datos extraídos por IA en ficha del docente: panel colapsable `p-panel` + tabla con nombre, tipo, confianza, fecha. Skeleton de carga. `cargarExtracciones()` reactivo con `@Input() cedula` (rund-mgp#13)
+- [x] Hotfix NG0100 + JSON side-car 404→200+null + reset CargaDocumento + refresco Editar documentación (rund-mgp#14)
+- [x] Fix by_category/professors dict corruption en extraction_index_service.py: normaliza list→dict (rund-ai fix)
+- [x] Fix IA_CLASIFICADO null en ruta multimodal: fallback job.tipo_documento con confidence=0.9 antes del callback (rund-ai#7)
+- [x] Búsqueda semántica: SearchService Jaccard token overlap + `POST /search` + proxy PHP + panel UI con tabla resultados (rund-ai#8, rund-api#11, rund-mgp#15)
+- [x] Validación de consistencia: ValidatorService 5 checks metadatos + Jaccard nombre <0.75 + normalización tipo_documento (rund-ai#9, rund-api#12, rund-mgp#16)
+- [x] Estadísticas cobertura agregada en dashboard Extracción + aliases OpenKM→schema AI (rund-mgp#17)
+- [x] Cobertura de tipos de documento en FichaDocente: getter `coberturaTipos` + panel chips success/danger (rund-mgp#18)
+- [x] Detalle de campos extraídos por documento: botón `pi-eye` + `p-dialog` lazy con campos del side-car (rund-mgp#19)
+- [x] 6 hotfixes UX: datos demográficos (búsqueda TIPO/CEDULA), selector múltiple normalizado, fecha extracción con `date` pipe, skeletons carga masiva, barra progreso real, dark mode sincronizado
+- [x] Fix extraction_index.json: `getFileUuidByPath` (UUID estable), `_deep_merge()` sobre `_create_empty_index()`, 1 worker + 4 threads + `fcntl.flock` (anti-race condition)
+- [x] Integración Angular con rund-auth: global middleware PHP en todas las rutas /api/v2 + fix loop infinito `data.init()→401→NavigationEnd` (rund-api#13, rund-mgp#20)
 
-### 🚧 En progreso
+### ❌ No entregado / Fuera de alcance
 
-- [ ] **[ALTA]** Integración de autenticación en rund-mgp (Angular): guards, interceptor, login component conectado a rund-api
-- [ ] **[ALTA]** Protección de todas las rutas de rund-api con `AuthMiddleware::authenticate()`
-- [ ] **[ALTA]** Rate limiting en endpoint de login (rund-auth)
-
-### ⏳ Implementado pero sin testing en producción
-
-- [ ] Búsqueda semántica con ChromaDB (`POST /search` en rund-ai)
-- [ ] Validación de consistencia entre documentos (`POST /validate`)
-
-### ❌ Pendiente (roadmap)
-
+- [ ] Rate limiting en endpoint de login (rund-auth)
 - [ ] OCR optimizado para cédulas colombianas (templates por posición de campo)
 - [ ] Dashboard de validación y calidad documental
 - [ ] Análisis de tendencias con Gemma
@@ -79,7 +81,7 @@
 - [ ] HTTPS en producción (coordinar con OTIC-ESAP)
 - [ ] Audit logging de eventos de autenticación
 - [ ] Detector de documentos duplicados
-- [ ] APP_INITIALIZER con carga inicial de 12 000 documentos
+- [ ] Carga inicial de ~12 000 documentos
 
 ---
 
@@ -392,26 +394,26 @@ def extract():
 - ✅ Sección "Extracción de datos" con dashboard de estadísticas (rund-api#3 + rund-mgp#7)
 - ✅ API `/extraccion/*` paginada + vista previa accordion (rund-api#4 + rund-mgp#8)
 
-**28 mayo 2026 (sesión 1)**
-- ✅ `POST /reset-stuck-jobs` — resetea "procesando" → "pendiente" en índice de extracción
-- ✅ `POST /retry-error-jobs` — re-encola "error" → "pendiente" para scheduler asíncrono
-- ✅ Botones condicionales en dashboard de Extracción de datos
-- ✅ Fix crítico: VM Docker Desktop al 100% de disco (liberados ~23 GB de caché)
-- ✅ PRs fusionados: rund-ai#2, rund-api#6, rund-mgp#10, rund-deployment#2
+**28 mayo 2026**
+- ✅ Reset/retry jobs bloqueados en cola de extracción (rund-ai#2, rund-api#6, rund-mgp#10)
+- ✅ Scheduler nocturno completo: CLI PHP + crontab + 4 endpoints REST + panel UI (rund-ai#3, rund-api#7, rund-mgp#11)
+- ✅ Clasificación automática IA al subir: ExtractionWorker + webhook + badge FichaDocente (rund-ai#4, rund-api#8, rund-mgp#12)
 
-**28 mayo 2026 (sesión 2)**
-- ✅ Scheduler nocturno completo:
-  - `rund-ai`: `POST /queue/enqueue-pending` + `get_pending_documents(statuses)` en ExtractionIndexService
-  - `rund-api`: CLI `app/cli/scheduler_extraccion.php` (lee estado JSON, verifica rango horario con soporte cruce medianoche, invoca rund-ai), crontab `*/30 22,23,0,1,2,3,4,5,6`, 4 endpoints REST (`GET /scheduler/status`, `POST /scheduler/start|pause|config`), `scheduler_state.json`
-  - `rund-mgp`: panel de control en vista Extracción — tag Activo/Pausado, botón toggle, configuración de rango horario colapsable, indicador de último run
-- ✅ PRs creados: rund-ai#3, rund-api#7, rund-mgp#11
-- ✅ TODO.md actualizado: scheduler → historial, JIT seleccionó TAREA 2 (auto-refresh) para reemplazarlo
+**02–05 jun 2026**
+- ✅ Datos extraídos en ficha del docente (rund-mgp#13)
+- ✅ Hotfixes: NG0100, JSON side-car 404, reset carga, refresco edición (rund-mgp#14)
+- ✅ Búsqueda semántica con Jaccard token overlap (rund-ai#8, rund-api#11, rund-mgp#15)
+- ✅ Validación de consistencia documental 5 checks + Jaccard nombre (rund-ai#9, rund-api#12, rund-mgp#16)
+- ✅ Cobertura de tipos en FichaDocente y dashboard (rund-mgp#17, rund-mgp#18)
+- ✅ Detalle de campos extraídos por documento en diálogo (rund-mgp#19)
+- ✅ 6 hotfixes UX: datos demográficos, fecha extracción, skeletons, dark mode
+- ✅ Fix extraction_index.json: UUID estable + _deep_merge + fcntl.flock
+- ✅ Fix IA_CLASIFICADO null en ruta multimodal (rund-ai#7)
+- ✅ Integración Angular con rund-auth: global middleware + fix loop infinito (rund-api#13, rund-mgp#20)
 
-### Próxima tarea sugerida
+### Tarea activa
 
 Ver `TODO.md`:
-- **TAREA 1**: Clasificación automática al subir un documento (conectar `/classify` al flujo de subida en FileHandlers.php + badge "IA" en ficha docente)
-- **TAREA 2**: Auto-refresh del dashboard de extracción con cola activa (polling cada 30 s cuando `colaActiva > 0`, se detiene al llegar a 0)
-- **TAREA 3** *(estratégica)*: Documentación de migración para OTIC (3 docs en `docs/migracion/`)
+- **TAREA 3** *(única activa)*: Documentación de migración para la OTIC — 3 archivos en `docs/migracion/`: `rund-api-migration-guide.md`, `rund-mgp-component-catalog.md`, `rund-ai-integration-spec.md`.
 
-**Contexto estratégico:** La OTIC-ESAP integrará `rund-api`, `rund-mgp` y el stack de IA/OCR en su plataforma. La TAREA 3 produce los documentos que permitirán a un LLM ejecutar esa migración de forma semiautomatizada (rund-api PHP→Node.js, rund-mgp Angular→framework OTIC, rund-ai/ocr/ollama como microservicios).
+**Contexto de entrega:** Producto entregado el 05 jun 2026. No se realizarán smoke-tests adicionales. La documentación de migración es el único trabajo pendiente — permite a un LLM ejecutar la migración semiautomatizada a la plataforma OTIC (rund-api PHP→Node.js, rund-mgp Angular→framework OTIC, stack IA/OCR como microservicios).
