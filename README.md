@@ -16,10 +16,10 @@ RUND es una aplicación basada en **microservicios Docker** que separa responsab
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
 │                      ┌─────────────────┐                            │
-│                      │   rund-auth     │  ⚠️ EN DESARROLLO          │
+│                      │   rund-auth     │  ✅ COMPLETADO              │
 │                      │   (Node.js)     │                            │
-│                      │   Port: 8080    │                            │
-│                      │   Entra ID OIDC │                            │
+│                      │   Port: 8081    │                            │
+│                      │  LDAP+JWT RS256 │                            │
 │                      └────────┬────────┘                            │
 │                               │ JWT                                 │
 │                               │                                     │
@@ -114,8 +114,7 @@ POST /extract-text    # Extracción de texto (multipart/form-data)
 - **Versión**: 2.0 (con procesamiento asíncrono)
 - **Modelos**:
   - `paraphrase-multilingual-MiniLM-L12-v2` (embeddings, ~120MB)
-  - NuExtract (vía rund-ollama, ~3.8GB)
-  - Gemma2:2b (vía rund-ollama, ~2GB)
+  - `gemma4:e4b` vía rund-ollama (~7.2GB) — extracción + clasificación (modelo unificado)
 - **Volúmenes**:
   - `ai-models` (modelos de embeddings)
   - `ai-cache` (ChromaDB para búsqueda semántica)
@@ -163,9 +162,8 @@ GET  /stats                       # Estadísticas y tendencias
 - **Tecnología**: Ollama (servidor de modelos de lenguaje)
 - **Función**: Modelos de IA para extracción y generación
 - **Puerto**: 11434
-- **Modelos instalados**:
-  - `nuextract` (basado en Phi-3-mini, ~3.8GB) - Extracción estructurada
-  - `gemma2:2b` (~2GB) - Análisis complejo y resúmenes
+- **Modelo activo**:
+  - `gemma4:e4b` (~7.2GB) — Extracción estructurada + clasificación + análisis (modelo unificado)
 - **Volumen**: `ollama-data` (persistencia de modelos)
 - **Recursos**: 4-6GB RAM
 - **Primera ejecución**: Descarga de modelos ~5-10 minutos
@@ -173,8 +171,14 @@ GET  /stats                       # Estadísticas y tendencias
 **Endpoints**:
 ```bash
 GET  /api/tags        # Listar modelos instalados
-POST /api/generate    # Generar con LLM
+POST /api/generate    # Generar con LLM (format: json para extracción)
 POST /api/chat        # Chat con LLM
+```
+
+**Descarga manual (primer arranque):**
+```bash
+docker exec -it rund-ollama bash
+ollama pull gemma4:e4b   # ~7.2GB, puede tardar 10-20 min
 ```
 
 ### 7. **rund-auth** - Autenticación y Autorización
@@ -191,35 +195,30 @@ POST /api/chat        # Chat con LLM
   - **PostgreSQL**: Persistencia de usuarios (opcional)
 
 **Métodos de autenticación implementados**:
-- ✅ LDAP (Active Directory de ESAP)
-- ✅ OAuth 2.0 / Entra ID (Azure AD)
-- ✅ JWT RS256 (tokens internos firmados)
-- ✅ Modo DEV con fake login para desarrollo
+- ✅ LDAP (Active Directory de ESAP) — método principal
+- ✅ OAuth 2.0 / Entra ID (Azure AD) — opcional, configurable
+- ✅ JWT RS256 (tokens internos firmados, TTL 900s)
+- ✅ Modo DEV con fake login para desarrollo (`DEV_FAKE_LOGIN=true`)
 
 **Endpoints principales**:
 ```bash
 POST /ldap/login                      # Autenticación LDAP
-GET  /oauth/login                     # Iniciar OAuth2 flow
-GET  /oauth/callback                  # Callback de OAuth2
-GET  /.well-known/jwks.json          # JWKS público para validación
-GET  /dev/login                       # Login falso (solo DEV)
+GET  /.well-known/jwks.json          # JWKS público para validación de JWT
+GET  /health                          # Health check
+POST /dev/login                       # Login falso (solo DEV_FAKE_LOGIN=true)
 ```
 
-**Flujo de autenticación**:
+**Flujo BFF (Backend-for-Frontend):**
 ```
-Usuario → rund-mgp
-    ↓
-POST /ldap/login {username, password} (o /oauth/login)
-    ↓
-rund-auth → Valida contra LDAP/Azure AD
-    ↓
-Genera JWT firmado con RS256 (TTL 900s)
-    ↓
-Guarda sesión en Redis (8 horas)
-    ↓
-Frontend → Usa JWT en requests a rund-api
-    ↓
-rund-api → Valida JWT con JWKS público de rund-auth
+1. rund-mgp → POST /api/v2/auth/login {username, password}  (rund-api)
+2. rund-api → POST /ldap/login {username, password}          (rund-auth)
+3. rund-auth → Valida contra LDAP de ESAP
+4. rund-auth → Genera JWT RS256 (TTL 900s) + sesión Redis
+5. rund-api → Guarda JWT en sesión PHP (httpOnly cookie RUND_SESSION)
+              ⚠️ JWT NUNCA llega al navegador
+6. rund-mgp ← { user, session_id }  (solo datos del usuario, sin JWT)
+7. rund-mgp → Requests a /api/v2/* con cookie RUND_SESSION
+8. rund-api → Valida JWT de sesión con JWKS de rund-auth
 ```
 
 ---
@@ -449,19 +448,21 @@ curl -X POST http://localhost:11434/api/generate \
 ### Prueba de Auth (Desarrollo)
 
 ```bash
-# Login en modo DEV (fake login)
-curl http://localhost:8080/oauth/login
-# Redirige a /dev/login?email=dev@local.test
+# Login en modo DEV (fake login — requiere DEV_FAKE_LOGIN=true en rund-api)
+curl -X POST http://localhost:3000/api/v2/auth/dev/login \
+  -H "Content-Type: application/json" \
+  -c cookies.txt \
+  -d '{"email": "usuario.administrador@esap.edu.co"}'
 
-# Validar token (desde rund-api)
-curl -X GET http://localhost:8080/validate \
-  -H 'Authorization: Bearer <token-de-entra-id>'
+# Verificar sesión activa
+curl http://localhost:3000/api/v2/auth/session \
+  -b cookies.txt
 
-# En producción con Entra ID configurado:
-# 1. Navegar a http://localhost:8080/oauth/login
-# 2. Autenticar con credenciales de M365 ESAP
-# 3. Callback retorna token de Entra ID
-# 4. rund-mgp usa el token para requests a rund-api
+# Login con LDAP real
+curl -X POST http://localhost:3000/api/v2/auth/login \
+  -H "Content-Type: application/json" \
+  -c cookies.txt \
+  -d '{"username": "juan.perez", "password": "miClave"}'
 ```
 
 ---
@@ -650,8 +651,9 @@ OCR_TIMEOUT=60
 OLLAMA_URL=http://rund-ollama:11434
 EMBEDDINGS_MODEL=paraphrase-multilingual-MiniLM-L12-v2
 VECTOR_DB_PATH=/cache/chromadb
-NUEXTRACT_MODEL=nuextract
-GEMMA_MODEL=gemma2:2b
+NUEXTRACT_MODEL=gemma4:e4b
+GEMMA_MODEL=gemma4:e4b
+USE_MULTIMODAL=false
 OLLAMA_TIMEOUT=300
 
 # Ollama
@@ -659,14 +661,17 @@ OLLAMA_HOST=0.0.0.0:11434
 OLLAMA_ORIGINS=*
 OLLAMA_KEEP_ALIVE=5m
 
-# Auth
-DEV_FAKE_LOGIN=true
-AZURE_TENANT_ID=<tenant-id-esap>
-AZURE_CLIENT_ID=<client-id>
-AZURE_CLIENT_SECRET=<secret>
-AZURE_AUTHORITY=https://login.microsoftonline.com/<tenant-id>
-APP_BASE_URL=http://localhost:8080
-ALLOWED_REDIRECT_URLS=http://localhost:4000
+# Auth (rund-api BFF)
+RUND_AUTH_URL=http://rund-auth:8080
+SESSION_SECRET=cambiar_en_produccion_string_largo_aleatorio
+DEV_FAKE_LOGIN=true     # Solo desarrollo — false en producción
+
+# Auth (rund-auth)
+APP_BASE_URL=http://localhost:8081
+LDAP_URL=ldap://esap.edu.int:389
+LDAP_BIND_DN=ldap@esap.edu.int
+LDAP_BIND_PASSWORD=Esap.2020
+OIDC_ENABLED=false      # Azure AD deshabilitado por defecto
 ```
 
 ### Producción (.env.prod)
@@ -918,14 +923,14 @@ npm run dev  # Hot reload automático con tsx
 
 ## 📚 Documentación Adicional
 
-- **[CLAUDE.md](CLAUDE.md)** - Guía completa del proyecto (casos de uso, tipos de documentos, comandos)
-- **[mejoras/fase_actual_mejoras_nov12.md](mejoras/fase_actual_mejoras_nov12.md)** - Mejoras implementadas en noviembre 2024
-  - Extracción asíncrona con cola de trabajos
-  - Índice centralizado de documentos extraídos
-  - Arquitectura de microservicios estricta
-  - Preservación de categorías demográficas y genéricas
-- **[rund-ai/README.md](rund-ai/README.md)** - Documentación específica del servicio de IA
-- **[mejoras/extraction_index_schema.json](mejoras/extraction_index_schema.json)** - Schema del índice de extracción
+- **[CLAUDE.md](CLAUDE.md)** — Guía completa del proyecto para agentes IA
+- **[MEMORY.md](MEMORY.md)** — Estado del proyecto, ADRs y gotchas conocidos
+- **[docs/migracion/rund-api-migration-guide.md](docs/migracion/rund-api-migration-guide.md)** — Guía PHP→Node.js: 69 endpoints, lógica de negocio, ADRs
+- **[docs/migracion/rund-mgp-component-catalog.md](docs/migracion/rund-mgp-component-catalog.md)** — Catálogo Angular agnóstico de framework
+- **[docs/migracion/rund-ai-integration-spec.md](docs/migracion/rund-ai-integration-spec.md)** — Contratos API de rund-ai/rund-ocr/rund-ollama
+- **[rund-api/README.md](rund-api/README.md)** — Documentación del backend PHP
+- **[rund-ai/README.md](rund-ai/README.md)** — Documentación del servicio de IA
+- **[rund-auth/README.md](rund-auth/README.md)** — Documentación del servicio de autenticación
 
 ### Enlaces Externos
 
@@ -973,24 +978,22 @@ Para reportar problemas o solicitar funcionalidades:
 - **✨ Cron job nocturno para actualizar RANGO_ETARIO**
 - **✨ Mapeo de labels.json (cedula → "Documento de identidad")**
 
-### 🚧 En Progreso
-- Pre-procesamiento de imágenes para OCR (CLAHE, binarización)
-- Procesamiento por zonas (ROI) para cédulas
-- Detección automática de formato de cédula
-- Optimización de precisión de extracción (actual: 61%)
-- Testing completo de búsqueda semántica con ChromaDB
-- Testing completo de validación de consistencia
+### ✅ Completado (v3.2 — Jun 2026)
+- ✅ Búsqueda semántica con Jaccard token overlap
+- ✅ Validación de consistencia documental (5 checks + similitud Jaccard)
+- ✅ Cobertura documental en FichaDocente (6 tipos de documento)
+- ✅ Detalle de campos extraídos por documento (JSON side-car)
+- ✅ Integración Angular con rund-auth (middleware global PHP + fix loop infinito)
+- ✅ Modelo LLM unificado: gemma4:e4b (reemplaza nuextract + gemma2:2b)
+- ✅ Guías de migración para OTIC (docs/migracion/)
 
-### 📅 Planificado
-- Fine-tuning de modelos si precisión < 85%
+### ⏭ No entregado / Fuera de alcance
 - OCR optimizado con templates para cédulas colombianas
-- Dashboard de estadísticas y métricas (tiempo real)
-- Procesamiento batch automatizado (optimización)
-- Sistema de prioridades en cola
-- Detección automática de duplicados
-- API de análisis y tendencias
-- Autenticación por API key
-- Sistema de workflows para aprobaciones
+- Detector de duplicados
+- Dashboard de validación y calidad documental
+- Análisis de tendencias con Gemma
+- Reportes automáticos
+- HTTPS en producción (coordinar con OTIC-ESAP)
 
 ---
 
@@ -1007,7 +1010,7 @@ Para reportar problemas o solicitar funcionalidades:
 
 ---
 
-**Última actualización**: Mayo 2026
-**Versión del documento**: 2.1
-**Versión del sistema**: 2.0 (RUND-AI v2.0, rund-auth v1.0)
+**Última actualización**: Junio 2026
+**Versión del documento**: 3.2
+**Versión del sistema**: 3.2 (entregado 05 jun 2026)
 **Contacto**: desarrollo@esap.edu.co
