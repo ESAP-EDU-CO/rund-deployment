@@ -14,33 +14,36 @@
 
 ## Tareas Activas
 
-### TAREA 2 · [FEATURE] Integración de Angular con rund-auth (autenticación) — PRs abiertas: rund-api#13, rund-mgp#20
+### TAREA 2 · [OPS] Verificar flujo LDAP real en entorno de desarrollo
 
-**Etiqueta:** `[FEATURE]`
+**Etiqueta:** `[OPS]`
 **Origen:** Motor JIT — 05 jun 2026
-**Prioridad:** ALTA — La app corre sin autenticación real. `rund-auth` ya está desplegado con LDAP + JWT RS256 + Redis. El frontend Angular aún usa `DEV_FAKE_LOGIN=true`. Conectar el flujo real cierra el gap de seguridad más crítico del sistema.
+**Prioridad:** MEDIA — La infraestructura de auth está completa (rund-api#13 + rund-mgp#20 merged). Queda verificar que `rund-auth` conecta correctamente con el LDAP/AD de ESAP en el entorno real y que el flujo login→sesión→datos funciona end-to-end.
 
 **Contexto:**
-`rund-auth` expone `POST /ldap/login` → devuelve `{ user, internal_jwt }`. El JWT se valida con `/.well-known/jwks.json`. Angular debe:
-1. Mostrar un formulario de login (username + password)
-2. Llamar a `POST /api/v2/auth/login` en rund-api (que proxea a rund-auth)
-3. Guardar el JWT en `localStorage` o cookie httpOnly
-4. Añadir el JWT en `Authorization: Bearer <token>` en cada request HTTP (interceptor)
-5. Redirigir a `/login` si el servidor devuelve 401
+Con los cambios merged, el flujo completo es:
+1. Usuario llena formulario → `POST /api/v2/auth/login`
+2. PHP llama `rund-auth` → LDAP/AD ESAP → devuelve user + JWT
+3. PHP guarda JWT en sesión PHP (cookie `RUND_SESSION`)
+4. Angular recibe `{ user, session_id }` y guarda usuario en signal
+5. Requests subsiguientes incluyen cookie → backend valida sesión
 
-Verificar si ya existe un `AuthService` o `AuthInterceptor` en rund-mgp antes de crear desde cero.
+La variable `DEV_FAKE_LOGIN=true` en `rund-auth` sigue activa para desarrollo sin AD.
 
-**Archivos a revisar/modificar:**
-- `rund-mgp/src/app/auth/` (si existe) o crear
-- `rund-mgp/src/app/app.config.ts` — registrar interceptor HTTP
-- `rund-mgp/src/app/vistas/login/` — formulario login
-- `rund-api`: endpoint proxy `/auth/login` → rund-auth (verificar si existe)
+**Verificaciones pendientes:**
+1. Con `DEV_FAKE_LOGIN=true`: login dev funciona → app carga sin loop ✓
+2. Con LDAP real: credenciales ESAP auténticas funcionan
+3. Sesión expira correctamente tras inactividad (8 horas)
+4. `rund-auth` healthcheck responde desde rund-api
+
+**Archivos relevantes (no modificar, solo verificar):**
+- `rund-api/app/src/Services/AuthService.php` — `loginWithLDAP()`
+- `rund-auth/.env` — `LDAP_ENABLED`, `DEV_FAKE_LOGIN`
 
 **Definición de done:**
-- [ ] Formulario de login funcional con LDAP (usuario ESAP + contraseña)
-- [ ] JWT almacenado y enviado en cada request
-- [ ] Redirección a `/login` en 401
-- [ ] `DEV_FAKE_LOGIN` deshabilitable sin romper el frontend
+- [ ] Login con credenciales dev funciona sin loop en consola
+- [ ] `GET /api/v2/auth/health` reporta rund-auth healthy
+- [ ] Acceder a `/listados` sin sesión redirige a `/login` (no loop)
 
 ---
 
@@ -121,6 +124,7 @@ El objetivo del documento es que un LLM (Claude Code, Codex, Gemini Code, etc.) 
 | 04 jun 2026 | [FEATURE] Estadísticas de cobertura agregada en dashboard de Extracción | ✅ Completada | rund-mgp#17 (merged): getter `coberturaPorTipo` + panel tarjetas. Fix aliases OpenKM→schema AI (por_categoria usa nombres de carpeta, no nombres de schema). Desplegado en Docker local. |
 | 04 jun 2026 | [FEATURE] Cobertura documental con chips en FichaDocente | ✅ Completada | rund-mgp#18 (merged): getter `coberturaTipos` + `coberturaTiposPresentes` (arrow fn no permitida en templates). Aliases OpenKM→schema AI. Fix lint CI (arrow fn en binding). |
 | 05 jun 2026 | [FEATURE] Detalle de campos extraídos por documento en FichaDocente | ✅ Completada | rund-mgp#19 (merged): botón `pi-eye` por fila + `p-dialog` carga lazy vía `getJsonExtraido`. 100% frontend: campos en `datos.data` del side-car. `isObject` flag + `<pre>` para objetos anidados. Width fijo eliminado del diálogo. |
+| 05 jun 2026 | [FEATURE] Integración de Angular con rund-auth — server-side auth enforcement | ✅ Completada | rund-api#13 (merged): `addGlobalMiddleware` en `routes_v2.php` — whitelist 5 prefijos públicos, resto requiere sesión PHP válida. rund-mgp#20 (merged): `if (!estaAutenticado()) return` en `inicializa()` corta loop infinito (data.init()→401→NavigationEnd→data.init()). Infraestructura Angular (Auth service, interceptor, guard, Login component) ya existía completa. |
 | 03 jun 2026 | [HOTFIX] 6 hotfixes UX — datos demográficos, fecha extracción, skeletons carga, dark mode | ✅ Completada | (1) `DocumentService.php`: búsqueda cédula por categoría `TIPO/CEDULA` en lugar de `name=cedula` → campos Género/Grupo étnico poblados. (2) `ficha-docente.ts`: selector `multiple` con valor `string` normalizado a array → campo Posgrado poblado. (3) `ficha-docente.html`: `date` pipe sin locale `es-CO` no registrado → Fecha extracción visible. (4) `carga.ts/html`: `p-skeleton` mientras carga CSV → elimina "No results found". (5) `edicion.ts`: progreso `cargandoProfesores` movido post-await → barra real. (6) `app.ts` + `extraccion.scss`: clase `app-dark` en `<html>` sincronizada con `prefers-color-scheme` + `:host-context` en scheduler-panel. rund-api: commit `78fb771`. rund-mgp: commit `b167d29`. |
 | 03 jun 2026 | [HOTFIX] extraction_index.json nunca persiste — Desglose por categoría siempre vacío | ✅ Completada | 3 bugs encadenados: (1) `subirJson` usaba `findArchivo` (índice búsqueda stale) → devolvía null → `createSimple` fallaba con 500 porque el archivo ya existía; fix: `getFileUuidByPath` vía `repository/getNodeUuid` (ruta directa). (2) `_load_index()` no reconstruía claves faltantes → `KeyError: 'total_documents'/'statistics'` en `add_document()` y `get_statistics()`; fix: `_deep_merge()` sobre `_create_empty_index()`. (3) Gunicorn 4 workers → race condition con threading.Lock(); fix: 1 worker + 4 threads + `fcntl.flock`. PRs: rund-api fix/categorias-openkm-sobreescritura, rund-ai fix/extraction-index-dict-corruption |
 
@@ -151,3 +155,4 @@ El objetivo del documento es que un LLM (Claude Code, Codex, Gemini Code, etc.) 
 | 04 jun 2026 | rund-mgp#18 merged (coberturaTipos FichaDocente + fix aliases + fix lint CI arrow fn). Ambas PRs merged, repo limpio. Aliases OpenKM→schema AI ahora consistentes en FichaDocente y dashboard Extracción. | Detalle de campos extraídos en FichaDocente (TAREA 2) + TAREA 3 doc | Próxima pieza de valor: gestor ve la lista de extracciones pero no los campos reales (número cédula, institución, cargo). |
 | 04 jun 2026 | Validación de consistencia completada (rund-ai#9, rund-api#12, rund-mgp#16 ✅ merged). ValidatorService: 5 checks de metadatos + nombre_inconsistente Jaccard (detecta "Fakeline"≠"Jakeline"). Fix normalización tipo_documento vía DOCUMENT_TYPE_TO_SCHEMA. | Cobertura de tipos de documento en FichaDocente (TAREA 1) + TAREA 3 doc | Cobertura es la siguiente pieza de valor: usa extraccionesDocente ya cargado, sin nueva API, muestra al gestor qué tipos faltan en la hoja de vida. |
 | 05 jun 2026 | Detalle de campos extraídos completado (rund-mgp#19 merged). Campos en datos.data del side-car (no datos_extraidos). isObject+pre para objetos anidados. Width fijo eliminado del diálogo. Rama eliminada, repo limpio. Sistema de autenticación (rund-auth ya desplegado con LDAP+JWT) sigue sin conectarse al frontend Angular. | Integración Angular con rund-auth (TAREA 2) + TAREA 3 doc | Auth es el gap de seguridad más crítico: rund-auth está listo, solo falta el flujo login→JWT→interceptor en Angular. |
+| 05 jun 2026 | Auth integration completada (rund-api#13 + rund-mgp#20 merged). Global middleware PHP enforces sesión en todas las rutas /api/v2. Fix loop infinito data.init() en Angular. Infraestructura Angular de auth ya existía completa (Auth service, interceptor, authGuard, Login component). Repos limpios. | Verificar flujo LDAP real en entorno dev (TAREA 2 nueva) + TAREA 3 doc | Código completo; queda smoke-test del login real con DEV_FAKE_LOGIN y con LDAP. |
