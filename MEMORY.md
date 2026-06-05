@@ -416,4 +416,10 @@ def extract():
 Ver `TODO.md`:
 - **TAREA 3** *(única activa)*: Documentación de migración para la OTIC — 3 archivos en `docs/migracion/`: `rund-api-migration-guide.md`, `rund-mgp-component-catalog.md`, `rund-ai-integration-spec.md`.
 
-**Contexto de entrega:** Producto entregado el 05 jun 2026. No se realizarán smoke-tests adicionales. La documentación de migración es el único trabajo pendiente — permite a un LLM ejecutar la migración semiautomatizada a la plataforma OTIC (rund-api PHP→Node.js, rund-mgp Angular→framework OTIC, stack IA/OCR como microservicios).
+**Contexto de entrega:** Producto entregado el 05 jun 2026. No se realizarán smoke-tests adicionales. La documentación de migración es el único trabajo pendiente.
+
+**Alcance de entrega (definido 05 jun 2026):**
+- `rund-api` y `rund-mgp` → código fuente completo (la OTIC reescribe: PHP→Node.js, Angular→framework desconocido)
+- `rund-ai`, `rund-ocr`, `rund-core` → fuentes Docker (Dockerfile + docker-compose); la OTIC construye imágenes sin reescribir
+
+Los documentos de migración deben permitir a un LLM ejecutar la migración semiautomatizada a la plataforma OTIC sin leer el código fuente original.

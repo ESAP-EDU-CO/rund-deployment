@@ -20,11 +20,15 @@
 **Origen:** Instrucción directa — 28 mayo 2026
 **Prioridad:** ESTRATÉGICA — no compite con TAREA 1 y 2; se trabaja en paralelo o al completarlas
 
+**Alcance de entrega (definido 05 jun 2026):**
+- `rund-api` y `rund-mgp` → **código fuente completo** (la OTIC reescribe: PHP→Node.js, Angular→framework desconocido)
+- `rund-ai`, `rund-ocr`, `rund-core` → **fuentes Docker** (Dockerfile + docker-compose); la OTIC construye imágenes sin reescribir
+
 **Contexto:**
 La OTIC-ESAP integrará `rund-api`, `rund-mgp` y el stack IA/OCR (`rund-ai`, `rund-ocr`, `rund-ollama`) en su plataforma institucional. La migración implicará:
 1. **rund-api PHP → Node.js**: reescritura del backend manteniendo los contratos de API
 2. **rund-mgp Angular → framework OTIC** (aún desconocido): migración del frontend
-3. **rund-ai + rund-ocr + rund-ollama → microservicios OTIC**: integración sin reescritura
+3. **rund-ai + rund-ocr + rund-ollama → microservicios OTIC**: integración sin reescritura (se entregan como imágenes Docker)
 
 El objetivo del documento es que un LLM (Claude Code, Codex, Gemini Code, etc.) pueda ejecutar cada migración de forma **semiautomatizada**, sin necesidad de leer el código fuente original.
 
@@ -60,10 +64,12 @@ El objetivo del documento es que un LLM (Claude Code, Codex, Gemini Code, etc.) 
 - `docs/migracion/rund-ai-integration-spec.md`
 
 **Definición de done:**
-- [ ] Cada documento se puede entregar a un LLM sin adjuntar código fuente y el LLM puede reproducir la funcionalidad en el framework destino
-- [ ] Todos los endpoints tienen ejemplos `curl` funcionales probados contra `localhost`
-- [ ] El catálogo de componentes Angular es agnóstico de framework (describe comportamiento, no sintaxis)
-- [ ] La spec de integración IA incluye un checklist de verificación post-deploy
+- [x] Cada documento se puede entregar a un LLM sin adjuntar código fuente y el LLM puede reproducir la funcionalidad en el framework destino
+- [x] Todos los endpoints tienen ejemplos `curl` funcionales probados contra `localhost`
+- [x] El catálogo de componentes Angular es agnóstico de framework (describe comportamiento, no sintaxis)
+- [x] La spec de integración IA incluye un checklist de verificación post-deploy
+
+**Estado: ✅ COMPLETADA — 05 jun 2026**
 
 ---
 
