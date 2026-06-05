@@ -14,30 +14,33 @@
 
 ## Tareas Activas
 
-### TAREA 2 · [FEATURE] Detalle de campos extraídos por documento en FichaDocente
+### TAREA 2 · [FEATURE] Integración de Angular con rund-auth (autenticación)
 
 **Etiqueta:** `[FEATURE]`
-**Origen:** Motor JIT — 04 jun 2026
-**Prioridad:** MEDIA — El gestor ve la lista de extracciones (nombre, tipo, confianza, fecha) pero no los campos reales extraídos (número de cédula, institución, cargo, etc.). Un botón "Ver datos" por fila con un `p-dialog` cierra el loop IA→UI.
+**Origen:** Motor JIT — 05 jun 2026
+**Prioridad:** ALTA — La app corre sin autenticación real. `rund-auth` ya está desplegado con LDAP + JWT RS256 + Redis. El frontend Angular aún usa `DEV_FAKE_LOGIN=true`. Conectar el flujo real cierra el gap de seguridad más crítico del sistema.
 
 **Contexto:**
-`extraccionesDocente` ya está cargado en FichaDocente. Verificar si el campo `datos_extraidos` viene en la respuesta de `getExtraccionDocente`. Si viene, el diálogo es 100% frontend. Si no, agregar el campo al query de `GET /api/v2/extraccion/profesor/{cedula}` en rund-api.
+`rund-auth` expone `POST /ldap/login` → devuelve `{ user, internal_jwt }`. El JWT se valida con `/.well-known/jwks.json`. Angular debe:
+1. Mostrar un formulario de login (username + password)
+2. Llamar a `POST /api/v2/auth/login` en rund-api (que proxea a rund-auth)
+3. Guardar el JWT en `localStorage` o cookie httpOnly
+4. Añadir el JWT en `Authorization: Bearer <token>` en cada request HTTP (interceptor)
+5. Redirigir a `/login` si el servidor devuelve 401
 
-Se requiere:
-1. En `ficha-docente.ts`: `selectedExtraccion: any = null` + método `verDetalle(doc)` + cierre
-2. En `ficha-docente.html`: columna "Ver" en la tabla + `p-dialog` con campos clave:valor
-3. (condicional) `rund-api`: incluir `datos_extraidos` si no viene en la respuesta actual
+Verificar si ya existe un `AuthService` o `AuthInterceptor` en rund-mgp antes de crear desde cero.
 
-**Archivos a modificar:**
-- `rund-mgp/src/app/compartidos/componentes/ficha-docente/ficha-docente.ts`
-- `rund-mgp/src/app/compartidos/componentes/ficha-docente/ficha-docente.html`
-- (condicional) `rund-api`: endpoint `/extraccion/profesor/{cedula}`
+**Archivos a revisar/modificar:**
+- `rund-mgp/src/app/auth/` (si existe) o crear
+- `rund-mgp/src/app/app.config.ts` — registrar interceptor HTTP
+- `rund-mgp/src/app/vistas/login/` — formulario login
+- `rund-api`: endpoint proxy `/auth/login` → rund-auth (verificar si existe)
 
 **Definición de done:**
-- [ ] Botón "Ver" en cada fila de la tabla de extracciones
-- [ ] Dialog muestra campos extraídos en formato clave:valor legible
-- [ ] Estado vacío cuando `datos_extraidos` es null o vacío
-- [ ] Cerrar dialog no afecta el estado de la tabla
+- [ ] Formulario de login funcional con LDAP (usuario ESAP + contraseña)
+- [ ] JWT almacenado y enviado en cada request
+- [ ] Redirección a `/login` en 401
+- [ ] `DEV_FAKE_LOGIN` deshabilitable sin romper el frontend
 
 ---
 
@@ -117,6 +120,7 @@ El objetivo del documento es que un LLM (Claude Code, Codex, Gemini Code, etc.) 
 | 04 jun 2026 | [FEATURE] Cobertura de tipos de documento en FichaDocente | ✅ Completada | rund-mgp: getter `coberturaTipos` (6 tipos estándar vs `extraccionesDocente` ya cargado) + panel "Cobertura documental" con chips success/danger antes de "Datos extraídos por IA". Estado vacío cuando `extraccionesDocente.length===0`. Sin nueva API. |
 | 04 jun 2026 | [FEATURE] Estadísticas de cobertura agregada en dashboard de Extracción | ✅ Completada | rund-mgp#17 (merged): getter `coberturaPorTipo` + panel tarjetas. Fix aliases OpenKM→schema AI (por_categoria usa nombres de carpeta, no nombres de schema). Desplegado en Docker local. |
 | 04 jun 2026 | [FEATURE] Cobertura documental con chips en FichaDocente | ✅ Completada | rund-mgp#18 (merged): getter `coberturaTipos` + `coberturaTiposPresentes` (arrow fn no permitida en templates). Aliases OpenKM→schema AI. Fix lint CI (arrow fn en binding). |
+| 05 jun 2026 | [FEATURE] Detalle de campos extraídos por documento en FichaDocente | ✅ Completada | rund-mgp#19: botón `pi-eye` por fila + `p-dialog` carga lazy vía `getJsonExtraido`. 100% frontend: `datos_extraidos` no estaba en el índice sino en JSON side-car OpenKM. `verDetalle()`, `cerrarDialog()`, `datosExtraidosEntries`, `formatKey()`. Skeleton + estado vacío. |
 | 03 jun 2026 | [HOTFIX] 6 hotfixes UX — datos demográficos, fecha extracción, skeletons carga, dark mode | ✅ Completada | (1) `DocumentService.php`: búsqueda cédula por categoría `TIPO/CEDULA` en lugar de `name=cedula` → campos Género/Grupo étnico poblados. (2) `ficha-docente.ts`: selector `multiple` con valor `string` normalizado a array → campo Posgrado poblado. (3) `ficha-docente.html`: `date` pipe sin locale `es-CO` no registrado → Fecha extracción visible. (4) `carga.ts/html`: `p-skeleton` mientras carga CSV → elimina "No results found". (5) `edicion.ts`: progreso `cargandoProfesores` movido post-await → barra real. (6) `app.ts` + `extraccion.scss`: clase `app-dark` en `<html>` sincronizada con `prefers-color-scheme` + `:host-context` en scheduler-panel. rund-api: commit `78fb771`. rund-mgp: commit `b167d29`. |
 | 03 jun 2026 | [HOTFIX] extraction_index.json nunca persiste — Desglose por categoría siempre vacío | ✅ Completada | 3 bugs encadenados: (1) `subirJson` usaba `findArchivo` (índice búsqueda stale) → devolvía null → `createSimple` fallaba con 500 porque el archivo ya existía; fix: `getFileUuidByPath` vía `repository/getNodeUuid` (ruta directa). (2) `_load_index()` no reconstruía claves faltantes → `KeyError: 'total_documents'/'statistics'` en `add_document()` y `get_statistics()`; fix: `_deep_merge()` sobre `_create_empty_index()`. (3) Gunicorn 4 workers → race condition con threading.Lock(); fix: 1 worker + 4 threads + `fcntl.flock`. PRs: rund-api fix/categorias-openkm-sobreescritura, rund-ai fix/extraction-index-dict-corruption |
 
@@ -146,3 +150,4 @@ El objetivo del documento es que un LLM (Claude Code, Codex, Gemini Code, etc.) 
 | 04 jun 2026 | Cobertura agregada completada (rund-mgp#17 merged, fix aliases OpenKM→schema AI incluido). rund-mgp#18 abierta para coberturaTipos en FichaDocente (cherry-pick de commit huérfano). Local limpio: main actualizado, ramas feature eliminadas, remote-tracking refs purgadas. | Detalle de campos extraídos en FichaDocente (TAREA 2) + TAREA 3 doc | Mostrar los campos extraídos cierra el loop IA→UI; el gestor puede verificar calidad de la extracción sin entrar al JSON side-car en OpenKM. |
 | 04 jun 2026 | rund-mgp#18 merged (coberturaTipos FichaDocente + fix aliases + fix lint CI arrow fn). Ambas PRs merged, repo limpio. Aliases OpenKM→schema AI ahora consistentes en FichaDocente y dashboard Extracción. | Detalle de campos extraídos en FichaDocente (TAREA 2) + TAREA 3 doc | Próxima pieza de valor: gestor ve la lista de extracciones pero no los campos reales (número cédula, institución, cargo). |
 | 04 jun 2026 | Validación de consistencia completada (rund-ai#9, rund-api#12, rund-mgp#16 ✅ merged). ValidatorService: 5 checks de metadatos + nombre_inconsistente Jaccard (detecta "Fakeline"≠"Jakeline"). Fix normalización tipo_documento vía DOCUMENT_TYPE_TO_SCHEMA. | Cobertura de tipos de documento en FichaDocente (TAREA 1) + TAREA 3 doc | Cobertura es la siguiente pieza de valor: usa extraccionesDocente ya cargado, sin nueva API, muestra al gestor qué tipos faltan en la hoja de vida. |
+| 05 jun 2026 | Detalle de campos extraídos completado (rund-mgp#19). 100% frontend: carga lazy del JSON side-car via getJsonExtraido. datos_extraidos vivía en OpenKM, no en el índice. Sistema de autenticación (rund-auth ya desplegado con LDAP+JWT) sigue sin conectarse al frontend Angular. | Integración Angular con rund-auth (TAREA 2) + TAREA 3 doc | Auth es el gap de seguridad más crítico: rund-auth está listo, solo falta el flujo login→JWT→interceptor en Angular. |
