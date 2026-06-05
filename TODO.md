@@ -14,7 +14,7 @@
 
 ## Tareas Activas
 
-### TAREA 2 · [FEATURE] Integración de Angular con rund-auth (autenticación)
+### TAREA 2 · [FEATURE] Integración de Angular con rund-auth (autenticación) — PRs abiertas: rund-api#13, rund-mgp#20
 
 **Etiqueta:** `[FEATURE]`
 **Origen:** Motor JIT — 05 jun 2026
